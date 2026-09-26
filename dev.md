@@ -38,22 +38,22 @@ npm test             # type-check + unit tests
 
 ## ObjectScript (BFF)
 
-The BFF lives in the `PORTICO` namespace, package `mp.*`.
+The BFF lives in the `PORTICO` namespace, package `portico.*`.
 
 ```bash
 # The Docker build runs this automatically (see iris.script). Manually:
 #   create namespace portico
 #   set $namespace = "portico"
-#   load /irisdev/src/mp/Install.cls
-#   load /irisdev/src/mp/Web/Api.cls
-#   load /irisdev/src/mp/Service/LogAggregator.cls
-#   load /irisdev/src/mp/UnitTest.cls
-#   do ##class(mp.Install).Run()
+#   load /irisdev/src/portico/Install.cls
+#   load /irisdev/src/portico/Web/Api.cls
+#   load /irisdev/src/portico/Service/LogAggregator.cls
+#   load /irisdev/src/portico/UnitTest.cls
+#   do ##class(portico.Install).Run()
 ```
 
 Run unit tests (inside IRIS, PORTICO namespace):
 ```
-do ##class(%UnitTest.Run).Run("mp.UnitTest")
+do ##class(%UnitTest.Run).Run("portico.UnitTest")
 ```
 
 ## Key URLs (inside the container)
