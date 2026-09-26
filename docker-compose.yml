@@ -1,0 +1,41 @@
+# IRIS Portico — one-command run
+#
+#   docker compose up --build
+#
+# Then open:  http://localhost:80/
+# Login:      Portico / Portico123   (in the app's login form)
+#
+# The container:
+#   1. builds the Angular frontend (node stage)
+#   2. starts nginx, which serves the Angular SPA on :80 and proxies
+#      /api/admin to the built-in IRIS web server on :52773
+#   3. creates the Portico user (so /api/admin Basic auth works)
+#   4. best-effort loads the ObjectScript BFF (log-center aggregation, health)
+#
+# The frontend calls the system /api/admin directly (same origin via the
+# nginx proxy, Basic auth) for all CRUD + auth. The BFF is a bonus.
+
+services:
+  portico:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: iris-portico:latest
+    container_name: iris-portico
+    ports:
+      - "80:80"        # nginx: Angular SPA + /api/admin proxy (main entry)
+      - "52773:52773"  # IRIS web server (direct, for debugging)
+    environment:
+      - CSENV=1
+      - IRISNAME=Portico
+      - IRISMANAGER=Portico
+      - IRISMANAGERPASSWORD=Portico123
+      - IRISUSERNAME=Portico
+      - IRISUSERPASSWORD=Portico123
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:80/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped

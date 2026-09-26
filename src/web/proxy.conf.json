@@ -1,0 +1,12 @@
+{
+  "/api/admin": {
+    "target": "http://localhost:52773",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/csp/portico-api": {
+    "target": "http://localhost:52773",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

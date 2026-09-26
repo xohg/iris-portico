@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Builds
+dist/
+**/dist/
+build/
+.angular/
+*.tsbuildinfo
+
+# npm cache (workspace-local)
+.npm-cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IRIS
+*.int
+*.lock
+
+# Python (embedded)
+__pycache__/
+*.pyc
+.venv/
+
+# Docker
+docker-data/
+
+# E2E tooling (large local Node installs) and test output
+e2e/tools/
+e2e/out/
+e2e/vid-test/
+e2e/video/
+out/
+
+# Local session / scratch documents
+HANDOVER.md
+SESSION-RESUME.md
+新建文本文档.txt

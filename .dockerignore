@@ -1,0 +1,12 @@
+# Keep the Docker build context lean and prevent host build artifacts
+# (notably src/web/node_modules) from overwriting the in-container install.
+**/node_modules
+**/dist
+**/.angular
+**/.npm-cache
+**/.git
+**/.build-log.txt
+**/*.log
+mainspec_v2.json
+api-client/package-lock.json
+src/web/package-lock.json
