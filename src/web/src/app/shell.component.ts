@@ -104,16 +104,16 @@ export class ShellComponent implements OnInit {
 
   // Unified icon style: every nav item uses a colored emoji (consistent
   // weight and color across the menu). The earlier mix of monochrome glyphs
-  // (▦ / ⚙ / ⟳) and monochrome emoji (🕸 / ⏱ / 🗄) rendered as a mix of
+  // (▦ / ⚙ / ⟳) and monochrome emoji (🕸 / ⏱ / 🗄 / 🖥) rendered as a mix of
   // colored and black-and-white icons, so those were replaced with colored
-  // equivalents (📡 / 📋 / 🛢).
+  // equivalents (📡 / 📋 / 🛢 / 💻).
   nav: NavItem[] = [
     { key: 'nav.dashboard', path: '/', icon: '📊' },
     { key: 'nav.webapps', path: '/webapps', icon: '📡' },
     { key: 'nav.permissions', path: '/permissions', icon: '🛡' },
     { key: 'nav.security', path: '/security', icon: '🔐' },
     { key: 'nav.tasks', path: '/tasks', icon: '📋' },
-    { key: 'nav.system', path: '/system', icon: '🖥' },
+    { key: 'nav.system', path: '/system', icon: '💻' },
     { key: 'nav.databases', path: '/databases', icon: '🛢' },
     { key: 'nav.namespaces', path: '/namespaces', icon: '🧩' },
     { key: 'nav.ecp', path: '/ecp', icon: '🔗' },

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { I18nService } from '../core/i18n.service';
+import { ThemeService } from '../core/theme.service';
 
 @Component({
   selector: 'app-login',
@@ -10,6 +11,10 @@ import { I18nService } from '../core/i18n.service';
   imports: [FormsModule],
   template: `
     <div class="login-wrap">
+      <div class="login-controls">
+        <button class="ghost" [title]="i18n.toggleTitle" (click)="i18n.setLang(i18n.lang === 'en' ? 'zh' : 'en')">{{ i18n.toggleLabel }}</button>
+        <button class="ghost" [title]="theme.label" (click)="theme.toggle()">{{ theme.icon }}</button>
+      </div>
       <form class="card login-card" (ngSubmit)="submit()">
         <div class="login-logo">
           <img class="logo-light" src="iris-portico-logo.svg" alt="IRIS Portico" />
@@ -39,7 +44,8 @@ import { I18nService } from '../core/i18n.service';
 export class LoginComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly i18n = inject(I18nService);
+  readonly i18n = inject(I18nService);
+  readonly theme = inject(ThemeService);
   t = (k: string) => this.i18n.t(k);
 
   user = 'Portico';
