@@ -295,7 +295,7 @@ function emptySubForm(): SubForm {
               @for (l of locks; track $index) {
                 <tr>
                   <td class="mono">{{ coalesce(l.Reference, l.Resource, l.resource) }}</td>
-                  <td>{{ coalesce(l.Pid, l.Owner, l.owner) }}</td>
+                  <td>{{ coalesce(l.OSUserName, l.Pid, l.Owner, l.owner) }}</td>
                   <td>{{ coalesce(l.ModeCount, l.State, l.state) }}</td>
                   <td>
                     @if (canOperate) {
@@ -376,7 +376,7 @@ export class SystemComponent implements OnInit {
   devNotice = '';
 
   // lock release
-  lockConfirm = -1;
+  lockConfirm = '';
   lockNotice = '';
 
   ngOnInit(): void {
@@ -647,17 +647,17 @@ export class SystemComponent implements OnInit {
 
   // ---- lock release --------------------------------------------------------
 
-  lockIdOf(l: any): number {
-    const v = coalesce(l?.Id, l?.id, l?.Pid);
-    const n = Number(v);
-    return Number.isFinite(n) ? n : -1;
+  // The release id is `DeleteID` (a string like "514000896,1,P40333"), not the
+  // numeric Pid.
+  lockIdOf(l: any): string {
+    return this.str(coalesce(l?.DeleteID, l?.deleteId, l?.Id, l?.id, l?.Pid));
   }
 
   /** Single confirm: first click arms, second click releases the lock. */
-  deleteLock(id: number): void {
-    if (id < 0) return;
+  deleteLock(id: string): void {
+    if (!id) return;
     if (this.lockConfirm !== id) { this.lockConfirm = id; return; }
-    this.lockConfirm = -1;
+    this.lockConfirm = '';
     this.admin.client.domains.system.releaseLock(id)
       .then(() => {
         this.lockNotice = this.t('system.locks.deleted');

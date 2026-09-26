@@ -284,7 +284,7 @@ export interface Domains {
     /** DELETE /v2/security/oauth2/resource-server/mapping?key. */
     removeOAuth2ResourceServerMapping(key: string): Promise<void>;
     // mft / ldap (write)
-    /** PUT /v2/security/mft/connection — body `connection` required. */
+    /** PUT /v2/security/mft/connection?connection — `connection` is a query param. */
     updateMFTConnection(connection: string, body: Record<string, unknown>): Promise<void>;
     /** DELETE /v2/security/mft/connection?connection. */
     removeMFTConnection(connection: string): Promise<void>;
@@ -292,7 +292,7 @@ export interface Domains {
     revokeMFTToken(connection: string): Promise<void>;
     /** GET /v2/security/mft/connection/auth-code-url — query `connection`, `scope`, `redirect`. */
     getMFTAuthCodeUrl(connection: string, q: { scope: string; redirect: string }): Promise<unknown>;
-    /** PUT /v2/security/ldap/configuration — body `name` required. */
+    /** PUT /v2/security/ldap/configuration?name — `name` is a query param. */
     updateLDAPConfiguration(name: string, body: Record<string, unknown>): Promise<void>;
     /** DELETE /v2/security/ldap/configuration?name. */
     removeLDAPConfiguration(name: string): Promise<void>;
@@ -335,12 +335,14 @@ export interface Domains {
     /** POST /v2/security/sql-column-privilege/revoke. */
     revokeSqlColumnPrivilege(body: { namespace: string; grantee: string; table: string; column: string; privilege: string; action: string }): Promise<void>;
     // audit events (write)
-    /** PUT /v2/security/audit/event — body `source` required (+ name, type). */
-    updateAuditEvent(body: { source: string; name?: string; type?: string }): Promise<void>;
-    /** DANGEROUS: DELETE /v2/security/audit/event?source. */
-    removeAuditEvent(source: string): Promise<void>;
-    /** POST /v2/security/audit/event/clear-count — body `{source}`. */
-    clearAuditEventCount(body: { source: string }): Promise<void>;
+    // All three require 3 query params: `source` (full event name), `type`,
+    // `name` (the latter two are not validated by the API but are required).
+    /** PUT /v2/security/audit/event?source&type&name — body `{Enabled}`. */
+    updateAuditEvent(q: { source: string; type: string; name: string }, body: { Enabled: boolean }): Promise<void>;
+    /** DANGEROUS: DELETE /v2/security/audit/event?source&type&name. */
+    removeAuditEvent(q: { source: string; type: string; name: string }): Promise<void>;
+    /** POST /v2/security/audit/event/clear-count?source&type&name. */
+    clearAuditEventCount(q: { source: string; type: string; name: string }): Promise<void>;
     // web-auth (write)
     /** POST /v2/security/web-auth/smtp-password — body `{SMTPPassword}`. */
     changeWebAuthSmtpPassword(body: { SMTPPassword: string }): Promise<void>;
@@ -613,7 +615,7 @@ export function createDomains(c: AdminClient): Domains {
       createWalletCollection: (name, body) => c.put<WalletCollection>('/v2/wallet/collection', body, { name }),
       updateWalletCollection: (name, body) => c.put<WalletCollection>('/v2/wallet/collection', body, { name }),
       removeWalletCollection: (name) => c.del<void>('/v2/wallet/collection', { name }),
-      listWalletSecrets: (name) => c.get<WalletSecretList>('/v2/wallet/secrets', { name }),
+      listWalletSecrets: (name) => c.get<WalletSecretList>('/v2/wallet/secrets', { collection: name }),
       createWalletSecret: (name, body) => c.put<WalletSecret>('/v2/wallet/secret', body, { name }),
       removeWalletSecret: (name) => c.del<void>('/v2/wallet/secret', { name }),
       listX509Credentials: () => c.get<X509CredentialsList>('/v2/security/x509-credentials'),
@@ -693,11 +695,11 @@ export function createDomains(c: AdminClient): Domains {
       updateOAuth2ResourceServerMapping: (key, body) => c.put<void>('/v2/security/oauth2/resource-server/mapping', { ...body, key }),
       removeOAuth2ResourceServerMapping: (key) => c.del<void>('/v2/security/oauth2/resource-server/mapping', { key }),
       // mft / ldap (write)
-      updateMFTConnection: (connection, body) => c.put<void>('/v2/security/mft/connection', { ...body, connection }),
+      updateMFTConnection: (connection, body) => c.put<void>('/v2/security/mft/connection', body, { connection }),
       removeMFTConnection: (connection) => c.del<void>('/v2/security/mft/connection', { connection }),
       revokeMFTToken: (connection) => c.del<void>('/v2/security/mft/connection/token', { connection }),
       getMFTAuthCodeUrl: (connection, q) => c.get<unknown>('/v2/security/mft/connection/auth-code-url', { connection, ...q }),
-      updateLDAPConfiguration: (name, body) => c.put<void>('/v2/security/ldap/configuration', { ...body, name }),
+      updateLDAPConfiguration: (name, body) => c.put<void>('/v2/security/ldap/configuration', body, { name }),
       removeLDAPConfiguration: (name) => c.del<void>('/v2/security/ldap/configuration', { name }),
       searchLdapPassword: (name, body) => c.post<unknown>('/v2/security/ldap/configuration/search-password', { LDAPSearchPassword: body.Password }, { name }),
       testLdapLogin: (body) => c.post<void>('/v2/security/ldap/test', body),
@@ -721,9 +723,9 @@ export function createDomains(c: AdminClient): Domains {
       grantSqlColumnPrivilege: (body) => c.post<void>('/v2/security/sql-column-privilege/grant', body),
       revokeSqlColumnPrivilege: (body) => c.post<void>('/v2/security/sql-column-privilege/revoke', body),
       // audit events (write)
-      updateAuditEvent: (body) => c.put<void>('/v2/security/audit/event', body),
-      removeAuditEvent: (source) => c.del<void>('/v2/security/audit/event', { source }),
-      clearAuditEventCount: (body) => c.post<void>('/v2/security/audit/event/clear-count', body),
+      updateAuditEvent: (q, body) => c.put<void>('/v2/security/audit/event', body, q),
+      removeAuditEvent: (q) => c.del<void>('/v2/security/audit/event', q),
+      clearAuditEventCount: (q) => c.post<void>('/v2/security/audit/event/clear-count', undefined, q),
       // web-auth (write)
       changeWebAuthSmtpPassword: (body) => c.post<void>('/v2/security/web-auth/smtp-password', body),
     },

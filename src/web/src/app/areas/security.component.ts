@@ -173,8 +173,8 @@ import { I18nService } from '../core/i18n.service';
               <tbody>
                 <tr><th>{{ t('security.x509.col.serial') }}</th><td class="mono">{{ coalesce(x509Cert.SerialNumber, x509Cert.serialNumber) }}</td></tr>
                 <tr><th>{{ t('security.x509.col.subjectDn') }}</th><td class="mono">{{ coalesce(x509Cert.SubjectDN, x509Cert.subjectDN) }}</td></tr>
-                <tr><th>{{ t('security.x509.col.issuer') }}</th><td class="mono">{{ coalesce(x509Cert.Issuer, x509Cert.issuer) }}</td></tr>
-                <tr><th>{{ t('security.x509.col.expires') }}</th><td>{{ coalesce(x509Cert.NotAfter, x509Cert.notAfter) }}</td></tr>
+                <tr><th>{{ t('security.x509.col.issuer') }}</th><td class="mono">{{ coalesce(x509Cert.IssuerDN, x509Cert.issuerDN, x509Cert.Issuer, x509Cert.issuer) }}</td></tr>
+                <tr><th>{{ t('security.x509.col.expires') }}</th><td>{{ coalesce(x509Cert.ValidityNotAfter, x509Cert.validityNotAfter, x509Cert.NotAfter, x509Cert.notAfter) }}</td></tr>
               </tbody>
             </table>
             <h3 style="margin-top:14px">{{ t('security.x509.certRaw') }}</h3>
@@ -700,22 +700,22 @@ import { I18nService } from '../core/i18n.service';
           <div class="toolbar" style="margin-bottom:12px"><button (click)="loadMftLdap()">{{ t('common.refresh') }}</button></div>
           <h3>{{ t('security.mft.connections') }}</h3>
           <table>
-            <thead><tr><th>{{ t('security.mft.col.service') }}</th><th>{{ t('security.mft.col.url') }}</th><th>{{ t('security.mft.col.username') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ t('security.mft.col.name') }}</th><th>{{ t('security.mft.col.service') }}</th><th>{{ t('security.mft.col.authorized') }}</th><th></th></tr></thead>
             <tbody>
-              @for (m of mft; track coalesce(m.Service, m.service, $index)) {
+              @for (m of mft; track coalesce(m.Name, m.name, $index)) {
                 <tr>
-                  <td class="mono">{{ coalesce(m.Service, m.service) }}</td>
-                  <td class="mono">{{ coalesce(m.URL, m.url) }}</td>
-                  <td>{{ coalesce(m.Username, m.username) }}</td>
+                  <td class="mono">{{ coalesce(m.Name, m.name) }}</td>
+                  <td>{{ coalesce(m.Service, m.service) }}</td>
+                  <td>{{ coalesce(m.IsAuthorized, m.isAuthorized) }}</td>
                   <td>
-                    <button class="ghost" style="padding:2px 8px" (click)="loadMftDetail(coalesce(m.Service, m.service))">{{ t('security.mft.act.detail') }}</button>
+                    <button class="ghost" style="padding:2px 8px" (click)="loadMftDetail(coalesce(m.Name, m.name))">{{ t('security.mft.act.detail') }}</button>
                     @if (canSecure) {
-                      <button class="ghost" style="padding:2px 8px" (click)="openMftEdit(coalesce(m.Service, m.service))">{{ t('security.mft.act.edit') }}</button>
-                      <button class="ghost" style="padding:2px 8px" (click)="revokeMftToken(coalesce(m.Service, m.service))">{{ t('security.mft.act.revoke') }}</button>
-                      @if (mftConfirm === coalesce(m.Service, m.service)) {
-                        <button class="ghost danger" style="padding:2px 8px" (click)="removeMft(coalesce(m.Service, m.service))">{{ t('common.deleteNow') }}</button>
+                      <button class="ghost" style="padding:2px 8px" (click)="openMftEdit(coalesce(m.Name, m.name))">{{ t('security.mft.act.edit') }}</button>
+                      <button class="ghost" style="padding:2px 8px" (click)="revokeMftToken(coalesce(m.Name, m.name))">{{ t('security.mft.act.revoke') }}</button>
+                      @if (mftConfirm === coalesce(m.Name, m.name)) {
+                        <button class="ghost danger" style="padding:2px 8px" (click)="removeMft(coalesce(m.Name, m.name))">{{ t('common.deleteNow') }}</button>
                       } @else {
-                        <button class="ghost danger" style="padding:2px 8px" (click)="mftConfirm = coalesce(m.Service, m.service)">{{ t('common.delete') }}</button>
+                        <button class="ghost danger" style="padding:2px 8px" (click)="mftConfirm = coalesce(m.Name, m.name)">{{ t('common.delete') }}</button>
                       }
                     }
                   </td>
@@ -740,14 +740,22 @@ import { I18nService } from '../core/i18n.service';
               <div>
                 <label class="label">{{ t('security.mft.ph.connection') }}</label>
                 <input [(ngModel)]="mftForm.connection" />
+                <label class="label">{{ t('security.mft.ph.service') }}</label>
+                <select [(ngModel)]="mftForm.Service">
+                  <option value="Box">Box</option>
+                  <option value="Dropbox">Dropbox</option>
+                  <option value="Kiteworks">Kiteworks</option>
+                </select>
                 <label class="label">{{ t('security.mft.ph.url') }}</label>
                 <input [(ngModel)]="mftForm.URL" />
               </div>
               <div>
                 <label class="label">{{ t('security.mft.ph.username') }}</label>
                 <input [(ngModel)]="mftForm.Username" />
-                <label class="label">{{ t('security.mft.ph.password') }}</label>
-                <input [(ngModel)]="mftForm.Password" />
+                <label class="label">{{ t('security.mft.ph.sslConfiguration') }}</label>
+                <input [(ngModel)]="mftForm.SSLConfiguration" />
+                <label class="label">{{ t('security.mft.ph.applicationName') }}</label>
+                <input [(ngModel)]="mftForm.ApplicationName" />
                 <button style="margin-top:8px" (click)="saveMft()">{{ t('security.mft.save') }}</button>
               </div>
             </div>
@@ -762,13 +770,13 @@ import { I18nService } from '../core/i18n.service';
           }
           <h3 style="margin-top:16px">{{ t('security.ldap.configurations') }}</h3>
           <table>
-            <thead><tr><th>{{ t('security.ldap.col.name') }}</th><th>{{ t('security.ldap.col.description') }}</th><th>{{ t('security.ldap.col.host') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ t('security.ldap.col.name') }}</th><th>{{ t('security.ldap.col.description') }}</th><th>{{ t('security.ldap.col.enabled') }}</th><th></th></tr></thead>
             <tbody>
               @for (l of ldap; track coalesce(l.Name, l.name, $index)) {
                 <tr>
                   <td class="mono">{{ coalesce(l.Name, l.name) }}</td>
                   <td>{{ coalesce(l.Description, l.description) }}</td>
-                  <td>{{ coalesce(l.Host, l.host) }}</td>
+                  <td><span class="badge" [class.ok]="truthy(l.Enabled, l.enabled)">{{ truthy(l.Enabled, l.enabled) ? t('common.on') : t('common.off') }}</span></td>
                   <td>
                     <button class="ghost" style="padding:2px 8px" (click)="loadLdapDetail(coalesce(l.Name, l.name))">{{ t('security.ldap.act.detail') }}</button>
                     @if (canSecure) {
@@ -850,13 +858,14 @@ import { I18nService } from '../core/i18n.service';
         <div class="card">
           <div class="toolbar" style="margin-bottom:12px"><button (click)="loadSuperservers()">{{ t('common.refresh') }}</button></div>
           <table>
-            <thead><tr><th>{{ t('security.superservers.col.port') }}</th><th>{{ t('security.superservers.col.bindAddress') }}</th><th>{{ t('security.superservers.col.state') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ t('security.superservers.col.port') }}</th><th>{{ t('security.superservers.col.bindAddress') }}</th><th>{{ t('security.superservers.col.enabled') }}</th><th>{{ t('security.superservers.col.systemDefault') }}</th><th></th></tr></thead>
             <tbody>
               @for (s of superservers; track coalesce(s.Port, s.port, $index)) {
                 <tr>
                   <td>{{ coalesce(s.Port, s.port) }}</td>
                   <td class="mono">{{ coalesce(s.BindAddress, s.bindAddress) }}</td>
-                  <td><span class="badge" [class.ok]="(coalesce(s.State, s.state)) === 'Running'">{{ coalesce(s.State, s.state) }}</span></td>
+                  <td><span class="badge" [class.ok]="!!coalesce(s.Enabled, s.enabled)">{{ coalesce(s.Enabled, s.enabled) ? t('security.superservers.enabledYes') : t('security.superservers.enabledNo') }}</span></td>
+                  <td><span class="badge" [class.ok]="!!coalesce(s.SystemDefault, s.systemDefault)">{{ coalesce(s.SystemDefault, s.systemDefault) ? t('security.superservers.defaultYes') : t('security.superservers.defaultNo') }}</span></td>
                   <td>
                     <button class="ghost" style="padding:2px 8px" (click)="loadSuperDetail(s, coalesce(s.Port, s.port))">{{ t('security.superservers.act.detail') }}</button>
                     @if (canSecure) {
@@ -1152,23 +1161,23 @@ import { I18nService } from '../core/i18n.service';
             </div>
             @if (auditEvents.length) {
               <table>
-                <thead><tr><th>{{ t('security.audit.col.source') }}</th><th>{{ t('security.audit.col.name') }}</th><th>{{ t('security.audit.col.type') }}</th><th>{{ t('security.audit.col.total') }}</th><th>{{ t('security.audit.col.enabled') }}</th><th></th></tr></thead>
+                <thead><tr><th>{{ t('security.audit.col.eventName') }}</th><th>{{ t('security.audit.col.enabled') }}</th><th>{{ t('security.audit.col.total') }}</th><th>{{ t('security.audit.col.written') }}</th><th>{{ t('security.audit.col.lost') }}</th><th></th></tr></thead>
                 <tbody>
-                  @for (a of auditEvents; track coalesce(a.Source, a.source, $index)) {
+                  @for (a of auditEvents; track coalesce(a.EventName, a.eventName, $index)) {
                     <tr>
-                      <td class="mono">{{ coalesce(a.Source, a.source) }}</td>
-                      <td>{{ coalesce(a.Name, a.name) }}</td>
-                      <td>{{ coalesce(a.Type, a.type) }}</td>
-                      <td>{{ coalesce(a.Total, a.total) }}</td>
+                      <td class="mono">{{ coalesce(a.EventName, a.eventName) }}</td>
                       <td><span class="badge" [class.ok]="truthy(a.Enabled, a.enabled)">{{ truthy(a.Enabled, a.enabled) ? t('common.on') : t('common.off') }}</span></td>
+                      <td>{{ coalesce(a.Total, a.total, 0) }}</td>
+                      <td>{{ coalesce(a.Written, a.written, 0) }}</td>
+                      <td>{{ coalesce(a.Lost, a.lost, 0) }}</td>
                       <td>
                         @if (canSecure) {
                           <button class="ghost" style="padding:2px 8px" (click)="openAuditEdit(a)">{{ t('security.oauth2.act.edit') }}</button>
-                          <button class="ghost" style="padding:2px 8px" (click)="clearAuditCount(coalesce(a.Source, a.source))">{{ t('security.audit.clearCount') }}</button>
-                          @if (auditConfirm === coalesce(a.Source, a.source)) {
-                            <button class="ghost danger" style="padding:2px 8px" (click)="removeAudit(coalesce(a.Source, a.source))">{{ t('common.deleteNow') }}</button>
+                          <button class="ghost" style="padding:2px 8px" (click)="clearAuditCount(a)">{{ t('security.audit.clearCount') }}</button>
+                          @if (auditConfirm === coalesce(a.EventName, a.eventName)) {
+                            <button class="ghost danger" style="padding:2px 8px" (click)="removeAudit(a)">{{ t('common.deleteNow') }}</button>
                           } @else {
-                            <button class="ghost danger" style="padding:2px 8px" (click)="auditConfirm = coalesce(a.Source, a.source)">{{ t('common.delete') }}</button>
+                            <button class="ghost danger" style="padding:2px 8px" (click)="auditConfirm = coalesce(a.EventName, a.eventName)">{{ t('common.delete') }}</button>
                           }
                         }
                       </td>
@@ -1181,12 +1190,13 @@ import { I18nService } from '../core/i18n.service';
           <div class="card">
             @if (canSecure) {
               <h2>{{ t('security.audit.edit') }}</h2>
-              <label class="label">{{ t('security.audit.ph.source') }}</label>
+              <label class="label">{{ t('security.audit.ph.eventName') }}</label>
               <input [(ngModel)]="auditForm.source" />
-              <label class="label">{{ t('security.audit.ph.name') }}</label>
-              <input [(ngModel)]="auditForm.name" />
-              <label class="label">{{ t('security.audit.ph.type') }}</label>
-              <input [(ngModel)]="auditForm.type" />
+              <label class="label">{{ t('security.audit.ph.enabled') }}</label>
+              <select [(ngModel)]="auditForm.enabled">
+                <option [value]="true">{{ t('common.on') }}</option>
+                <option [value]="false">{{ t('common.off') }}</option>
+              </select>
               <button style="margin-top:8px" (click)="saveAudit()">{{ t('security.audit.save') }}</button>
             } @else { <p class="muted">{{ t('security.audit.empty') }}</p> }
           </div>
@@ -1320,7 +1330,7 @@ export class SecurityComponent implements OnInit {
   ldap: any[] = [];
   mftDetail: any = null;
   mftDetailName = '';
-  mftForm = { connection: '', URL: '', Username: '', Password: '' };
+  mftForm = { connection: '', Service: 'Box', URL: '', SSLConfiguration: '', Username: '', ApplicationName: '' };
   mftAuth = { connection: '', scope: '', redirect: '' };
   mftAuthResult = '';
   mftConfirm: string | null = null;
@@ -1362,7 +1372,7 @@ export class SecurityComponent implements OnInit {
   sqlForm = { kind: 'admin', namespace: '', grantee: '', privilege: '', table: '', column: '', action: 'grant' };
 
   auditEvents: any[] = [];
-  auditForm = { source: '', name: '', type: '' };
+  auditForm = { source: '', enabled: true };
   auditConfirm: string | null = null;
 
   webAuth: any = null;
@@ -1405,6 +1415,18 @@ export class SecurityComponent implements OnInit {
     return String(v);
   }
 
+  /** Join an array (or scalar) of strings into a comma-separated field. */
+  joinArr(v: unknown): string {
+    if (v === null || v === undefined) return '';
+    if (Array.isArray(v)) return v.map((x) => this.asText(x)).filter(Boolean).join(', ');
+    return this.asText(v);
+  }
+
+  /** Split a comma-separated field into a trimmed, non-empty string array. */
+  splitArr(v: string): string[] {
+    return (v || '').split(',').map((s) => s.trim()).filter(Boolean);
+  }
+
   /** One-line rendering of an admin-privilege list item (object or string). */
   sqlAdminItemText(v: unknown): string {
     if (typeof v === 'string') return v;
@@ -1445,8 +1467,13 @@ export class SecurityComponent implements OnInit {
     catch (e) { this.error = this.admin.errorMessage(e); }
   }
   async createWallet(): Promise<void> {
-    try { await this.admin.client.domains.security.createWalletCollection(this.walletName, { Name: this.walletName } as any); await this.loadWallet(); }
-    catch (e) { this.error = this.admin.errorMessage(e); }
+    if (!this.walletName) return;
+    try {
+      // Collection create requires `EditResource` / `UseResource` in
+      // "resource:permission" format (the `?name` query carries the collection id).
+      await this.admin.client.domains.security.createWalletCollection(this.walletName, { EditResource: '%Admin_Manage:USE', UseResource: '%Admin_Manage:READ' });
+      await this.loadWallet();
+    } catch (e) { this.error = this.admin.errorMessage(e); }
   }
   async removeWallet(name: string): Promise<void> {
     try { await this.admin.client.domains.security.removeWalletCollection(name); await this.loadWallet(); }
@@ -1464,11 +1491,18 @@ export class SecurityComponent implements OnInit {
   }
   async saveSecret(): Promise<void> {
     const f = this.secretForm;
-    if (!f.name) return;
+    if (!f.name || !f.type) return;
+    const collection = this.secretCollection || this.walletName;
+    if (!collection) return;
     try {
-      await this.admin.client.domains.security.createWalletSecret(f.name, { name: f.name, value: f.value, type: f.type } as any);
+      // Secret id is the dotted `Collection.Secret`; body is `{ Type,
+      // WalletSecretConfig }`. For %Wallet.KeyValue the config is
+      // `Secret: { <key>: <value> }`.
+      const body: Record<string, unknown> = { Type: f.type };
+      body.WalletSecretConfig = { Secret: { value: f.value } };
+      await this.admin.client.domains.security.createWalletSecret(collection + '.' + f.name, body);
       await this.loadWallet();
-      if (this.secretCollection) await this.loadSecrets(this.secretCollection);
+      await this.loadSecrets(collection);
     } catch (e) { this.error = this.admin.errorMessage(e); }
   }
 
@@ -1914,19 +1948,24 @@ export class SecurityComponent implements OnInit {
   openMftEdit(name: string): void {
     const d = this.mftDetail;
     this.mftForm.connection = name;
+    this.mftForm.Service = this.asText(coalesce(d?.Service, d?.service)) || 'Box';
     this.mftForm.URL = d ? this.asText(coalesce(d.URL, d.url)) : '';
+    this.mftForm.SSLConfiguration = d ? this.asText(coalesce(d.SSLConfiguration, d.sslConfiguration)) : '';
     this.mftForm.Username = d ? this.asText(coalesce(d.Username, d.username)) : '';
-    this.mftForm.Password = '';
+    this.mftForm.ApplicationName = d ? this.asText(coalesce(d.ApplicationName, d.applicationName)) : '';
   }
   async saveMft(): Promise<void> {
     const f = this.mftForm;
     if (!f.connection) return;
     try {
+      // `connection` is a query param (handled by the client); the body requires
+      // Service / URL / SSLConfiguration / Username / ApplicationName (no Password).
       await this.admin.client.domains.security.updateMFTConnection(f.connection, {
-        connection: f.connection,
+        Service: f.Service,
         URL: f.URL,
+        SSLConfiguration: f.SSLConfiguration,
         Username: f.Username,
-        Password: f.Password,
+        ApplicationName: f.ApplicationName,
       });
       await this.loadMftLdap();
     } catch (e) { this.error = this.admin.errorMessage(e); }
@@ -1959,17 +1998,19 @@ export class SecurityComponent implements OnInit {
     const d = this.ldapDetail;
     this.ldapForm.name = name;
     this.ldapForm.Description = d ? this.asText(coalesce(d.Description, d.description)) : '';
-    this.ldapForm.Host = d ? this.asText(coalesce(d.LDAPHostNames, d.Host, d.host)) : '';
+    // LDAPHostNames is an array; join for single-field display.
+    this.ldapForm.Host = d ? this.joinArr(coalesce(d.LDAPHostNames, d.Host, d.host)) : '';
     this.ldapForm.LDAPBaseDN = d ? this.asText(d.LDAPBaseDN) : '';
   }
   async saveLdap(): Promise<void> {
     const f = this.ldapForm;
     if (!f.name) return;
     try {
+      // `name` is a query param (handled by the client); `LDAPHostNames` is an
+      // array (the `Host` field is rejected by the API).
       await this.admin.client.domains.security.updateLDAPConfiguration(f.name, {
-        name: f.name,
         Description: f.Description,
-        Host: f.Host,
+        LDAPHostNames: this.splitArr(f.Host),
         LDAPBaseDN: f.LDAPBaseDN,
       });
       await this.loadMftLdap();
@@ -2191,26 +2232,31 @@ export class SecurityComponent implements OnInit {
       this.auditEvents = Array.isArray(l) ? l : [];
     } catch (e) { this.error = this.admin.errorMessage(e); }
   }
+  // The write endpoints require 3 query params (source/type/name); only `source`
+  // (the full event name) is validated — `type` and `name` are not, so we send
+  // safe fixed values.
+  private auditQ(e: any): { source: string; type: string; name: string } {
+    return { source: this.asText(coalesce(e?.EventName, e?.eventName, e?.Source, e?.source)), type: 'System', name: 'audit' };
+  }
   openAuditEdit(e: any): void {
-    this.auditForm.source = this.asText(coalesce(e.Source, e.source));
-    this.auditForm.name = this.asText(coalesce(e.Name, e.name));
-    this.auditForm.type = this.asText(coalesce(e.Type, e.type));
+    this.auditForm.source = this.asText(coalesce(e.EventName, e.eventName));
+    this.auditForm.enabled = !!coalesce(e.Enabled, e.enabled, true);
   }
   async saveAudit(): Promise<void> {
     const f = this.auditForm;
     if (!f.source) return;
     try {
-      await this.admin.client.domains.security.updateAuditEvent({ source: f.source, name: f.name, type: f.type });
+      await this.admin.client.domains.security.updateAuditEvent(this.auditQ({ EventName: f.source }), { Enabled: !!f.enabled });
       await this.loadAuditEvents();
     } catch (e) { this.error = this.admin.errorMessage(e); }
   }
-  async removeAudit(source: string): Promise<void> {
+  async removeAudit(e: any): Promise<void> {
     this.auditConfirm = null;
-    try { await this.admin.client.domains.security.removeAuditEvent(source); await this.loadAuditEvents(); }
+    try { await this.admin.client.domains.security.removeAuditEvent(this.auditQ(e)); await this.loadAuditEvents(); }
     catch (e) { this.error = this.admin.errorMessage(e); }
   }
-  async clearAuditCount(source: string): Promise<void> {
-    try { await this.admin.client.domains.security.clearAuditEventCount({ source }); await this.loadAuditEvents(); }
+  async clearAuditCount(e: any): Promise<void> {
+    try { await this.admin.client.domains.security.clearAuditEventCount(this.auditQ(e)); await this.loadAuditEvents(); }
     catch (e) { this.error = this.admin.errorMessage(e); }
   }
 

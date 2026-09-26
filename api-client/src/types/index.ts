@@ -91,15 +91,19 @@ export interface AsyncTaskResultSysBGTask {
 }
 
 export interface AuditEvent {
-/** Description of the event. */
-  Description?: string;
+/** Full event name (the `source` query param), e.g. `%System/%Login/LoginFailure`. */
+  EventName?: string;
 /** Event enabled. */
   Enabled?: boolean;
+/** Total events recorded. */
+  Total?: number;
+/** Events successfully written. */
+  Written?: number;
+/** Events lost (failed to write). */
+  Lost?: number;
 }
 
-export interface AuditEventList {
-
-}
+export type AuditEventList = AuditEvent[];
 
 export interface AuditRecord {
   AuditIndex?: string;
@@ -551,9 +555,14 @@ export interface LDAPConfig {
   LDAPUniqueDNIdentifier?: string;
 }
 
-export interface LDAPConfigurationList {
-
+export interface LDAPConfigurationListItem {
+  Name?: string;
+  Enabled?: boolean;
+  Description?: string;
+  LDAPCACertFile?: string;
 }
+
+export type LDAPConfigurationList = LDAPConfigurationListItem[];
 
 export type LanguageServer = {   BindToIPAddress?: string; /** Which IP address, among the several IP addresses that the machine has, that allows incoming connections. The default is 127.0.0.1. Specify 0.0.0.0 to listen on all IP addresses local to the machine (1 */    ConnectionTimeout?: number; /** Number of seconds to wait for a connection to be established with the Gateway Server. */    InitializationTimeout?: number; /** Number of seconds to wait for a response during initialization of the Gateway Server. */    LogFile?: string; /** Fully qualified name of a file to log all communication between InterSystems IRIS and the Gateway Server. Usually this setting should be left blank, and used only for trouble-shooting. */    Port?: number; /** TCP port number for communication between the Gateway Server and the proxy classes in InterSystems IRIS. Required on creation, optional on updates. */    Resource?: string; /** The Resource name that controls access to this gateway.<br>If no resource is defined, then it is a public gateway which anyone can use. */    Type?: "Java" | "XSLT" | "JDBC" | "ODBC" | "ML" | "R" | ".NET" | "Python" | "Remote"; /** Type of the Object Gateway.  It can have one of the following values:<br>Type = "Remote" for remote connections<br>Type = "Java" for Gateway for Java<br>Type = "XSLT" for Gateway for XSLT<br>Type = "J */    UseSharedMemory?: boolean; /** Use shared memory for connection if available. */    SSLConfigurationServer?: string; /** Name of entry in Security.SSLConfigs class to be used for Server TLS/SSL */    SSLConfigurationClient?: string; /** Name of entry in Security.SSLConfigs class to be used for Client TLS/SSL */    VerifySSLHostName?: boolean; /** Should TLS/SSL client do Host Name Verification */    Custom?: ({  } | {   ClassPath?: string; /** CLASSPATH containing the files required to be passed as an argument when starting the JVM. The user should typically provide here the files containing the classes used via the Java-based Gateway. Ther */    JavaHome?: string; /** Location of the JVM (similar to the JAVA_HOME environment variable). It is used to find the target JVM and assemble the command to start the Gateway. <br>Note: If there is a default JVM on the machine */    JVMArgs?: string; /** Optional arguments to be passed to the Java Virtual Machine (JVM) to include when assembling the command to start the Gateway. <br>For example, you can specify system properties: "Dsystemvar=value" <b */  } | {   DotNetVersion?: string; /** Specified the .NET version to be used. Possible values are listed in VALIDNETVERSIONS and VALIDFRAMEWORKVERSIONS parameters of the class Config.Gateways. The default is N6.0. */    FilePath?: string; /** Location of the Gateway Server executable. It is used to find the target executable and assemble the command to start the Gateway on a local machine. <br>If this setting is not specified, the default  */    Exec32?: boolean; /** On 64-bit platforms, indicates if the Object Gateway server is to be executed as 32-bit (default) or 64-bit.<br>(This property applies only to .NET Gateways and to 64-bit platforms.) */  } | {   PythonOptions?: string; /** Optional Python options to be passed to the Python interpreter to include when assembling the command to start the Gateway. <br>(This property applies only to Python Gateways.) */    PythonPath?: string; /** Location of the Python Executable Path.  It is used to find the target Python interpreter and get the command to start the Gateway. <br>Note: If there is a default Python interpreter on the machine th */  } | {   Address?: string; /** Server Address<br>(This property applies only to Remote Gateways.). Required. */  }); };
 
@@ -665,9 +674,32 @@ export interface IntegrityCheckRequest {
   PartialCheck?: boolean;
 }
 
-export interface LockList {
-
+export interface Lock {
+/** Process id holding the lock. */
+  Pid?: number;
+/** Number of modes held. */
+  ModeCount?: number;
+/** Lock reference (global name). */
+  Reference?: string;
+/** Database of the lock. */
+  Directory?: string;
+/** System flag. */
+  System?: boolean;
+/** Whether the lock is removable. */
+  Removable?: boolean;
+/** The id used to release the lock (DELETE /v2/lock?id=DeleteID). */
+  DeleteID?: string;
+/** Whether the lock can be examined. */
+  CanBeExamined?: boolean;
+/** Remote owner (if any). */
+  RemoteOwner?: string;
+/** Routine info for the holder. */
+  RoutineInfo?: string;
+/** OS user name of the holder. */
+  OSUserName?: string;
 }
+
+export type LockList = Lock[];
 
 export interface LoginRequest {
 /** Username for authentication */
@@ -684,9 +716,13 @@ export interface LoginResponse {
 
 export type MFTConnection = {   Service?: "Box" | "Dropbox" | "Kiteworks"; /** Service is the name of the service that is accessed by this connection. Required on creation, optional on updates. */    URL?: string; /** URL is the base URL for REST access to this service including the final /. URL will default to the base URL for the remote file management service that is provided by the vendor. URL may be modified f */    SSLConfiguration?: string; /** SSLConfiguration is the name of the SSL Configuration to be used to communicate with the file management API. Required on creation, optional on updates. */    Username?: string; /** Username is the name of the user on whose behalf the file access will take place. Required on creation, optional on updates. */    ApplicationName?: string; /** ApplicationName is the OAuth2 application name associated with this connection. The ConnectionId property will be used as the session id for the specific access token. Required on creation, optional o */  };
 
-export interface MFTConnectionList {
-
+export interface MFTConnectionListItem {
+  Name?: string;
+  Service?: string;
+  IsAuthorized?: string;
 }
+
+export type MFTConnectionList = MFTConnectionListItem[];
 
 export interface MainDashboardStats {
   Performance?: Performance;
@@ -1127,6 +1163,10 @@ export interface SharedMemoryUsage {
 }
 
 export interface Superserver {
+/** TCP port the server listens on. */
+  Port?: number;
+/** Address the server binds to. */
+  BindAddress?: string;
 /** Description of the Server */
   Description?: string;
   EnableCacheDirect?: boolean;
@@ -1326,11 +1366,21 @@ export interface WebSessionList {
 }
 
 export interface X509Credential {
+/** Name (alias) of the credential. Required on creation. */
+  Alias?: string;
+/** Whether a private key is present. */
+  HasPrivateKey?: boolean;
+/** File containing the X.509 certificate(s). Required on creation (POST). */
+  CertificateFile?: string;
+/** File containing the private key. */
+  PrivateKeyFile?: string;
+/** Password for the private key. */
+  PrivateKeyPassword?: string;
 /** Array of usernames which may access these credentials. If the OwnerList is empty, the credentials are available to any user. */
   OwnerList?: string[];
-/** File containing X.509 certificate(s) of trusted Certificate Authorities. Can be an absolute pathname or a pathname relative to the manager's directory. When WS-Security validates a Signature where the */
+/** File containing X.509 certificate(s) of trusted Certificate Authorities. */
   CAFile?: string;
-/** PeerNames is an optional array of peers which expect this certificate to be used. Each peer name will normally be a DNS name. However, any application defined name may be used. */
+/** PeerNames is an optional array of peers which expect this certificate to be used. */
   PeerNames?: string[];
 }
 
