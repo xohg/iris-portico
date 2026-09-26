@@ -19,10 +19,12 @@ Method OnExit()
         } else if action = "logcenter" {
             do ##class(portico.Service.LogAggregator).Render($zhval(limit), source)
         } else {
-            write "{\"error\":\"unknown action. use ?action=health or ?action=logcenter\"}"
+            ; Embedded quotes are doubled (ObjectScript has no backslash
+            ; escapes — a bare backslash in a string literal is literal).
+            write "{"error"":""unknown action. use ?action=health or ?action=logcenter""}"
         }
     } catch ex {
-        write "{\"error":"_..jsonEscape(ex.Message)_"}"
+        write "{"error"":""_..jsonEscape(ex.Message)_""}"
     }
 }
 
@@ -34,13 +36,25 @@ Method %Health()
     set prod = $system.OSystem.GetProductName()
     set mode = $system.Status.GetMode()
 
-    set out = "{\"status":"_..jsonEscape("ok")_"
-    set out = out ",\"app":"_..jsonEscape("IRIS Portico BFF")_"
-    set out = out ",\"namespace":"_..jsonEscape(ns)_"
-    set out = out ",\"product":"_..jsonEscape(prod)_"
-    set out = out ",\"version":"_..jsonEscape(ver)_"
-    set out = out ",\"systemMode":"_..jsonEscape(mode)_"
-    set out = out ",\"time":"_..jsonEscape($ztimestamp)_"
+    ; Precompute the escaped values into variables — a quoted string literal
+    ; cannot be nested inside a _..._ interpolation that is itself inside a
+    ; quoted string, so we escape first, then interpolate the variable.
+    set ok    = ..jsonEscape("ok")
+    set app   = ..jsonEscape("IRIS Portico BFF")
+    set nse   = ..jsonEscape(ns)
+    set prodE = ..jsonEscape(prod)
+    set verE  = ..jsonEscape(ver)
+    set modeE = ..jsonEscape(mode)
+    set timeE = ..jsonEscape($ztimestamp)
+
+    ; Embedded quotes are doubled (ObjectScript has no backslash escapes).
+    set out = "{"status"":""_ok_"""
+    set out = out ","app"":""_app_"""
+    set out = out ","namespace"":""_nse_"""
+    set out = out ","product"":""_prodE_"""
+    set out = out ","version"":""_verE_"""
+    set out = out ","systemMode"":""_modeE_"""
+    set out = out ","time"":""_timeE_"""
     set out = out "}"
     write out
 }
@@ -48,8 +62,11 @@ Method %Health()
 /// Escape a string for safe embedding in a JSON string literal.
 Function jsonEscape(s As %String) As %String
 {
-    set s = $replace(s, "\", "\\")
-    set s = $replace(s, """", ""\"""")
+    ; Backslash and quote are built with $char() — a bare backslash in an
+    ; ObjectScript string literal is literal (no escapes), so ""\""" would
+    ; parse as an empty string followed by garbage.
+    set s = $replace(s, $char(92), $char(92) _ $char(92))
+    set s = $replace(s, $char(34), $char(92) _ $char(34))
     set s = $replace(s, $char(10), "\n")
     set s = $replace(s, $char(13), "\r")
     set s = $replace(s, $char(9), "\t")

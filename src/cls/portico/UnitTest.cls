@@ -30,10 +30,13 @@ Method TestRender()
 /// jsonEscape escapes quotes and backslashes.
 Method TestJsonEscape()
 {
+    ; The expected escape sequences are built with $char() — a bare
+    ; backslash in an ObjectScript string literal is literal (no escapes),
+    ; so "\\" means two backslashes, not an escaped quote.
     set out = ##class(portico.Service.LogAggregator).jsonEscape("""hello""")
-    do $assert:1($find("\\"", out) > 0, "quote should be escaped")
+    do $assert:1($find($char(92) _ $char(34), out) > 0, "quote should be escaped")
     set out2 = ##class(portico.Service.LogAggregator).jsonEscape("a\b")
-    do $assert:1($find("\\\\", out2) > 0, "backslash should be escaped")
+    do $assert:1($find($char(92) _ $char(92), out2) > 0, "backslash should be escaped")
 }
 
 }

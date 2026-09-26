@@ -31,14 +31,6 @@ RUN cd src/web && npm run build:prod
 # ---------------------------------------------------------------------------
 FROM intersystemsdc/iris-community:2026.2 AS app
 
-# ObjectScript source. The setup script loads these directly (load + compile),
-# so no IPM/ZPM module descriptor is needed.
-COPY src/cls /irisdev/src
-
-# Angular build output (served by nginx as the static SPA at /, and also kept
-# at /irisdev/web in case an IRIS web app is registered to serve it).
-COPY --from=web /app/src/web/dist/portico-web/browser /irisdev/web
-
 # Deployment modes (build arg):
 #   INSTALL_NGINX=1 (default, production) — nginx serves the Angular SPA on
 #   :80 and proxies /api/admin to the built-in IRIS web server on :52773.
@@ -56,6 +48,10 @@ ARG INSTALL_NGINX=1
 #
 # The IRIS image's default user is irisowner (non-root), so apt-get must run as
 # root; switch back to irisowner for the remaining (IRIS-owned) steps.
+#
+# This apt step is placed BEFORE the source COPYs so it is cached independently
+# of source changes — otherwise every .cls/web edit would invalidate it and
+# re-hit the (flaky) Ubuntu archive.
 USER root
 # The Ubuntu archive intermittently returns 502 Bad Gateway (on both the
 # metadata update and the .deb downloads), so the whole update+install sequence
@@ -76,6 +72,13 @@ RUN ok=0; for i in 1 2 3 4 5 6; do \
          ln -sf /dev/null /var/log/nginx/access.log \
          && ln -sf /dev/null /var/log/nginx/error.log; \
        fi
+# ObjectScript source. The setup script loads these directly (load + compile),
+# so no IPM/ZPM module descriptor is needed.
+COPY src/cls /irisdev/src
+
+# Angular build output (served by nginx as the static SPA at /, and also kept
+# at /irisdev/web in case an IRIS web app is registered to serve it).
+COPY --from=web /app/src/web/dist/portico-web/browser /irisdev/web
 COPY nginx-portico.conf /etc/nginx/sites-available/portico
 # nginx is started by the (non-root) setup script, so it must run as the
 # default user (irisowner). Two adjustments make that work:
@@ -94,13 +97,19 @@ RUN if [ "$INSTALL_NGINX" = "1" ]; then \
 # ownership does not match the running user ("Invalid registry ownership").
 USER irisowner
 
-# One-time setup runs at FIRST container start (NOT at build time — the IRIS
-# instance data is created at container start, so a build-time `iris session`
-# would hit a throwaway instance). The image's entrypoint executes every script
-# in /docker-entrypoint-initdb.d/ after the instance is initialized; this
-# script starts nginx, creates the Portico user (so /api/admin Basic auth
-# works), and best-effort registers the web apps. Idempotent.
+# One-time setup runs at container start (NOT at build time — the IRIS instance
+# data is created at container start, so a build-time `iris session` would hit a
+# throwaway instance). This script starts nginx, creates the Portico user (so
+# /api/admin Basic auth works), and best-effort registers the web apps.
+# Idempotent — safe to run on every start.
 COPY --chmod=755 portico-setup.sh /docker-entrypoint-initdb.d/00-portico-setup.sh
+
+# Wrapper entrypoint (see entrypoint-portico.sh): starts /iris-main directly
+# WITHOUT the -a hook, so the base image's broken docker_setup_* (irissqlcli /
+# dbapi.connect) never runs and FATALs the container. It waits for the instance
+# to be ready, then runs the setup script above.
+COPY --chmod=755 entrypoint-portico.sh /entrypoint-portico.sh
+ENTRYPOINT ["/tini", "--", "/entrypoint-portico.sh"]
 
 EXPOSE 52773
 EXPOSE 80
@@ -111,11 +120,8 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=5 \
   CMD sh -c 'if command -v nginx >/dev/null 2>&1; then curl -sf http://localhost:80/ >/dev/null; else code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:52773/ 2>/dev/null); [ "$code" -lt 500 ]; fi'
 
-# Start IRIS (the base image's entrypoint keeps the container alive with
-# "iris"; "iris run" is NOT a valid subcommand). The "--after" hook runs our
-# setup script at the very start of the entrypoint's "iris-after-start" —
-# i.e. BEFORE the image's docker_setup_* functions (which can fail on some
-# "latest" builds due to a broken irissqlcli/dbapi.connect, aborting the
-# entrypoint before /docker-entrypoint-initdb.d/ is reached). The setup is
-# idempotent, so running it on every start is safe.
-CMD ["iris", "--after", "/docker-entrypoint-initdb.d/00-portico-setup.sh"]
+# (No CMD: the wrapper ENTRYPOINT starts /iris-main directly and runs the setup
+# script. The base image's "iris --after ..." CMD is NOT used — its
+# iris-after-start branch runs the broken docker_setup_* (irissqlcli /
+# dbapi.connect) which FATALs the container on some 2026.2 builds. See
+# entrypoint-portico.sh.)

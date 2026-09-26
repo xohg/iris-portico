@@ -32,7 +32,10 @@ services:
       - IRISUSERNAME=Portico
       - IRISUSERPASSWORD=Portico123
     healthcheck:
-      test: ["CMD-SHELL", "code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:52773/ 2>/dev/null); [ \"$code\" -lt 500 ]"]
+      # Note: $$code — compose interpolates $VAR, so a bare $code would be
+      # replaced with an empty string at parse time and the check would always
+      # fail with "[: Illegal number". $$ escapes to a literal $ for the shell.
+      test: ["CMD-SHELL", "code=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:52773/ 2>/dev/null); [ \"$$code\" -lt 500 ]"]
       interval: 30s
       timeout: 15s
       retries: 5

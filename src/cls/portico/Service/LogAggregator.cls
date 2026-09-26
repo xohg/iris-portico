@@ -49,7 +49,8 @@ ClassMethod BuildJSON(limit As %Integer, source As %String) As %String
 
     // ---- render ---------------------------------------------------------
     if entries = "" { set entries = "[]" }
-    quit "{\"count":"_count_","entries":"_entries_"}"
+    ; Embedded quotes are doubled (ObjectScript has no backslash escapes).
+    quit "{""count"":""_count_"","entries"":""_entries_""}"
 }
 
 /// Add system-status entries (mode, state, version, product, uptime).
@@ -97,10 +98,11 @@ ClassMethod CollectJournal(ByRef entries, ByRef first, ByRef count, limit As %In
 ClassMethod AddEntry(ByRef entries, ByRef first, ByRef count, source As %String, message As %String, detail As %String)
 {
     set ts = $ztimestamp
-    set obj = "{\"source":"_..jsonEscape(source)_"
-    set obj = obj ",\"timestamp":"_..jsonEscape(ts)_"
-    set obj = obj ",\"message":"_..jsonEscape(message)_"
-    set obj = obj ",\"detail":"_..jsonEscape($extract(detail, 1, 500))_"
+    ; Embedded quotes are doubled (ObjectScript has no backslash escapes).
+    set obj = "{""source"":""_..jsonEscape(source)_"""
+    set obj = obj ",""timestamp"":""_..jsonEscape(ts)_"""
+    set obj = obj ",""message"":""_..jsonEscape(message)_"""
+    set obj = obj ",""detail"":""_..jsonEscape($extract(detail, 1, 500))_"""
     set obj = obj "}"
     if first {
         set entries = obj
@@ -114,8 +116,11 @@ ClassMethod AddEntry(ByRef entries, ByRef first, ByRef count, source As %String,
 /// Escape a string for safe embedding in a JSON string literal.
 ClassMethod jsonEscape(s As %String) As %String
 {
-    set s = $replace(s, "\", "\\")
-    set s = $replace(s, """", ""\"""")
+    ; Backslash and quote are built with $char() — a bare backslash in an
+    ; ObjectScript string literal is literal (no escapes), so ""\""" would
+    ; parse as an empty string followed by garbage.
+    set s = $replace(s, $char(92), $char(92) _ $char(92))
+    set s = $replace(s, $char(34), $char(92) _ $char(34))
     set s = $replace(s, $char(10), "\n")
     set s = $replace(s, $char(13), "\r")
     set s = $replace(s, $char(9), "\t")
