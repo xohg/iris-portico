@@ -82,9 +82,9 @@ const EMPTY_FORM: TaskForm = {
                     <button class="ghost" style="padding:2px 8px" (click)="selectTask(task)">{{ t('tasks.action.details') }}</button>
                   }
                   @if (canMutate) {
-                    <button class="ghost" style="padding:2px 8px" (click)="runTask(coalesce(task.Name, task.name))">{{ t('tasks.action.run') }}</button>
-                    <button class="ghost" style="padding:2px 8px" (click)="suspendTask(coalesce(task.Name, task.name))">{{ t('tasks.action.suspend') }}</button>
-                    <button class="ghost" style="padding:2px 8px" (click)="resumeTask(coalesce(task.Name, task.name))">{{ t('tasks.action.resume') }}</button>
+                    <button class="ghost" style="padding:2px 8px" (click)="runTask(task.Id)">{{ t('tasks.action.run') }}</button>
+                    <button class="ghost" style="padding:2px 8px" (click)="suspendTask(task.Id)">{{ t('tasks.action.suspend') }}</button>
+                    <button class="ghost" style="padding:2px 8px" (click)="resumeTask(task.Id)">{{ t('tasks.action.resume') }}</button>
                   }
                 </td>
               </tr>
@@ -201,7 +201,16 @@ const EMPTY_FORM: TaskForm = {
             <button (click)="resumeManager()">{{ t('tasks.action.resume') }}</button>
           }
         </div>
-        <pre class="log">{{ managerText }}</pre>
+        @if (managerError) { <p class="error">{{ managerError }}</p> }
+        @if (manager) {
+          <table>
+            <tbody>
+              @for (row of managerRows(); track $index) {
+                <tr><th>{{ row[0] }}</th><td class="mono">{{ row[1] }}</td></tr>
+              }
+            </tbody>
+          </table>
+        } @else if (!managerError) { <p class="empty">{{ t('common.loading') }}</p> }
       </div>
     </div>
   `,
@@ -228,7 +237,8 @@ export class TasksComponent implements OnInit {
   tasks: any[] = [];
   history: any[] = [];
   upcoming: any[] = [];
-  managerText = '';
+  manager: any = null;
+  managerError = '';
   loading = false;
   busy = false;
   error = '';
@@ -281,23 +291,30 @@ export class TasksComponent implements OnInit {
 
   async loadManager(): Promise<void> {
     try {
-      const m = await this.admin.client.domains.tasks.managerStatus();
-      this.managerText = JSON.stringify(m, null, 2);
+      this.manager = await this.admin.client.domains.tasks.managerStatus();
     } catch (e) {
-      this.managerText = this.t('tasks.manager.unavailable') + ' ' + this.admin.errorMessage(e);
+      this.manager = null;
+      this.managerError = this.t('tasks.manager.unavailable') + ' ' + this.admin.errorMessage(e);
     }
   }
 
-  async runTask(name: string): Promise<void> {
-    try { await this.admin.client.domains.tasks.run(name); await this.load(); }
+  /** Normalize the manager status object into [key, value][] rows (template-safe). */
+  managerRows(): [string, unknown][] {
+    const o = this.manager && typeof this.manager === 'object' && !Array.isArray(this.manager)
+      ? (this.manager as Record<string, unknown>) : {};
+    return Object.entries(o);
+  }
+
+  async runTask(id: number): Promise<void> {
+    try { await this.admin.client.domains.tasks.run(id, { RunNow: true }); await this.load(); }
     catch (e) { this.error = this.admin.errorMessage(e); }
   }
-  async suspendTask(name: string): Promise<void> {
-    try { await this.admin.client.domains.tasks.suspend(name); await this.load(); }
+  async suspendTask(id: number): Promise<void> {
+    try { await this.admin.client.domains.tasks.suspend(id); await this.load(); }
     catch (e) { this.error = this.admin.errorMessage(e); }
   }
-  async resumeTask(name: string): Promise<void> {
-    try { await this.admin.client.domains.tasks.resume(name); await this.load(); }
+  async resumeTask(id: number): Promise<void> {
+    try { await this.admin.client.domains.tasks.resume(id); await this.load(); }
     catch (e) { this.error = this.admin.errorMessage(e); }
   }
   async runManager(): Promise<void> {

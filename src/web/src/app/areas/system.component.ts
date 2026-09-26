@@ -167,12 +167,28 @@ function emptySubForm(): SubForm {
             <button (click)="loadDeviceSettings()">{{ t('common.refresh') }}</button>
           </div>
           @if (deviceSettings) {
-            <table>
-              <tbody>
-                <tr><th>{{ t('system.deviceSettings.io') }}</th><td class="mono small">{{ jsonOrNone(coalesce(deviceSettings.IOSettings, deviceSettings.ioSettings)) }}</td></tr>
-                <tr><th>{{ t('system.deviceSettings.telnet') }}</th><td class="mono small">{{ jsonOrNone(coalesce(deviceSettings.TelnetSettings, deviceSettings.telnetSettings)) }}</td></tr>
-              </tbody>
-            </table>
+            <div class="grid cols-2">
+              <div>
+                <h3>{{ t('system.deviceSettings.io') }}</h3>
+                <table>
+                  <tbody>
+                    @for (row of settingsRows(pickSettings(deviceSettings, 'IOSettings', 'ioSettings')); track $index) {
+                      <tr><th>{{ row[0] }}</th><td class="mono small">{{ row[1] }}</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h3>{{ t('system.deviceSettings.telnet') }}</h3>
+                <table>
+                  <tbody>
+                    @for (row of settingsRows(pickSettings(deviceSettings, 'TelnetSettings', 'telnetSettings')); track $index) {
+                      <tr><th>{{ row[0] }}</th><td class="mono small">{{ row[1] }}</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
           } @else { <p class="empty">{{ t('common.loading') }}</p> }
         </div>
       </div>
@@ -475,6 +491,17 @@ export class SystemComponent implements OnInit {
     if (v === null || v === undefined) return '—';
     if (typeof v === 'string') return v;
     try { return JSON.stringify(v); } catch { return String(v); }
+  }
+
+  /** Pick a settings sub-object by PascalCase/lowercase key (template-safe). */
+  pickSettings(o: any, a: string, b: string): unknown {
+    return o && typeof o === 'object' ? (o[a] ?? o[b]) : null;
+  }
+
+  /** Normalize a settings object into [key, value][] rows (template-safe). */
+  settingsRows(v: unknown): [string, unknown][] {
+    const o = v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+    return Object.entries(o);
   }
 
   async broadcast(): Promise<void> {

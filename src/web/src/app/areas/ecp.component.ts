@@ -34,8 +34,26 @@ import { I18nService } from '../core/i18n.service';
         <h2>{{ t('ecp.settings') }}</h2>
         @if (settings) {
           <div class="grid cols-2">
-            <div class="stat"><span class="value mono">{{ jsonOrNone(settings.AppServerSettings, settings.appServerSettings) }}</span><span class="label">{{ t('ecp.settings.app') }}</span></div>
-            <div class="stat"><span class="value mono">{{ jsonOrNone(settings.DataServerSettings, settings.dataServerSettings) }}</span><span class="label">{{ t('ecp.settings.data') }}</span></div>
+            <div>
+              <h3>{{ t('ecp.settings.app') }}</h3>
+              <table>
+                <tbody>
+                  @for (row of settingsRows(pickSettings(settings, 'AppServerSettings', 'appServerSettings')); track $index) {
+                    <tr><th>{{ row[0] }}</th><td class="mono">{{ row[1] }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3>{{ t('ecp.settings.data') }}</h3>
+              <table>
+                <tbody>
+                  @for (row of settingsRows(pickSettings(settings, 'DataServerSettings', 'dataServerSettings')); track $index) {
+                    <tr><th>{{ row[0] }}</th><td class="mono">{{ sslEcpLabel(row[0], row[1]) }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           </div>
         } @else { <p class="empty">{{ t('common.loading') }}</p> }
       </div>
@@ -263,6 +281,28 @@ export class EcpComponent implements OnInit {
       try { return JSON.stringify(v); } catch { return String(v); }
     }
     return String(v);
+  }
+
+  /** Pick a settings sub-object by PascalCase/lowercase key (template-safe). */
+  pickSettings(o: any, a: string, b: string): unknown {
+    return o && typeof o === 'object' ? (o[a] ?? o[b]) : null;
+  }
+
+  /** Normalize a settings object into [key, value][] rows (template-safe). */
+  settingsRows(v: unknown): [string, unknown][] {
+    const o = v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+    return Object.entries(o);
+  }
+
+  /** Render a settings row value; the SSLECPServer enum becomes an i18n label. */
+  sslEcpLabel(key: string, v: unknown): string {
+    if (key === 'SSLECPServer') {
+      const n = Number(v);
+      if (n === 0) return this.t('ecp.settings.sslDisabled');
+      if (n === 1) return this.t('ecp.settings.sslEnabled');
+      if (n === 2) return this.t('ecp.settings.sslRequired');
+    }
+    return v === undefined || v === null ? this.t('common.none') : String(v);
   }
 
   /** Normalize an API value (possibly a number) to a form-string. */

@@ -188,7 +188,7 @@ const PCT_FIELDS = ['Name', 'AllowType', 'Class', 'AllowAccess', 'System'];
                   <tr>
                     <td class="mono">{{ coalesce(s.ID, s.id) }}</td>
                     <td>{{ coalesce(s.Username, s.username) }}</td>
-                    <td>{{ coalesce(s.ApplicationName, s.appname) }}</td>
+                    <td>{{ coalesce(s.Application, s.ApplicationName, s.appname) }}</td>
                     <td><button class="ghost danger" style="padding:2px 8px" (click)="killSession(coalesce(s.ID, s.id))">{{ t('webapps.sessions.kill') }}</button></td>
                   </tr>
                 }
@@ -415,7 +415,7 @@ export class WebAppsComponent implements OnInit {
     const name = coalesce(p.Name, p.name, '');
     if (!name) return;
     try {
-      this.pctDetail = await this.admin.client.domains.webApps.getPctAccess(name).catch(() => null);
+      this.pctDetail = await this.admin.client.domains.webApps.getPctAccess(name, String(coalesce(p.AllowType, p.allowtype, '')), String(coalesce(p.Class, p.classname, ''))).catch(() => null);
       this.pctDetailRows = this.rows(this.pctDetail, PCT_FIELDS);
     } catch (e) {
       this.error = this.admin.errorMessage(e);
@@ -442,7 +442,7 @@ export class WebAppsComponent implements OnInit {
     this.pctFormOpen = true;
   }
 
-  /** Create or edit (PUT /v2/web-app/pct-access; body `name` required). */
+  /** Create or edit (PUT /v2/web-app/pct-access — name+allowType+class query params required). */
   async savePct(): Promise<void> {
     const name = this.pctFormName.trim();
     if (!name || this.pctBusy) return;
@@ -457,7 +457,7 @@ export class WebAppsComponent implements OnInit {
       if (this.pctFormAllowType) body.AllowType = this.pctFormAllowType;
       if (this.pctFormClass) body.Class = this.pctFormClass;
       if (this.pctFormSystem) body.System = this.pctFormSystem;
-      await this.admin.client.domains.webApps.upsertPctAccess(name, body);
+      await this.admin.client.domains.webApps.upsertPctAccess(name, this.pctFormAllowType, this.pctFormClass, body);
       this.notice = this.t('webapps.pct.saved');
       this.pctFormOpen = false;
       await this.loadPct();
@@ -467,7 +467,7 @@ export class WebAppsComponent implements OnInit {
     this.pctBusy = false;
   }
 
-  /** Delete a PCT access entry (DELETE /v2/web-app/pct-access?name) — single confirm. */
+  /** Delete a PCT access entry (DELETE /v2/web-app/pct-access — name+allowType+class query) — single confirm. */
   async deletePct(p: any): Promise<void> {
     const name = coalesce(p.Name, p.name, '');
     if (!name || this.pctBusy) return;
@@ -476,7 +476,7 @@ export class WebAppsComponent implements OnInit {
     this.error = '';
     this.notice = '';
     try {
-      await this.admin.client.domains.webApps.removePctAccess(name);
+      await this.admin.client.domains.webApps.removePctAccess(name, String(coalesce(p.AllowType, p.allowtype, '')), String(coalesce(p.Class, p.classname, '')));
       this.notice = this.t('webapps.pct.deleted');
       if (this.pctDetail === p) {
         this.pctDetail = null;

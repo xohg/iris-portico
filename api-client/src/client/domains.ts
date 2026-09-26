@@ -130,12 +130,12 @@ export interface Domains {
     listPctAccess(name: string): Promise<WebAppPctAccess[]>;
     /** DANGEROUS: DELETE /v2/web-app?name. */
     removeApp(name: string): Promise<void>;
-    /** GET /v2/web-app/pct-access?name. */
-    getPctAccess(name: string): Promise<WebAppPctAccess>;
-    /** PUT /v2/web-app/pct-access — body `name` required. */
-    upsertPctAccess(name: string, body: Record<string, unknown>): Promise<WebAppPctAccess>;
-    /** DELETE /v2/web-app/pct-access?name. */
-    removePctAccess(name: string): Promise<void>;
+    /** GET /v2/web-app/pct-access — `name`+`allowType`+`class` are required query params. */
+    getPctAccess(name: string, allowType: string, className: string): Promise<WebAppPctAccess>;
+    /** PUT /v2/web-app/pct-access — `name`+`allowType`+`class` required query params; body carries the access fields. */
+    upsertPctAccess(name: string, allowType: string, className: string, body: Record<string, unknown>): Promise<WebAppPctAccess>;
+    /** DELETE /v2/web-app/pct-access — `name`+`allowType`+`class` required query params. */
+    removePctAccess(name: string, allowType: string, className: string): Promise<void>;
     listSessions(): Promise<WebSessionList>;
     removeSession(id: string): Promise<void>;
     listDocDbs(): Promise<DocDBApplicationList>;
@@ -351,9 +351,9 @@ export interface Domains {
     create(id: string, body: Partial<Task>): Promise<Task>;
     update(id: string, body: Partial<Task>): Promise<Task>;
     remove(id: string): Promise<void>;
-    run(id: string, body?: { when?: string }): Promise<void>;
-    suspend(id: string): Promise<void>;
-    resume(id: string): Promise<void>;
+    run(id: number | string, body?: { RunNow?: boolean; when?: string }): Promise<void>;
+    suspend(id: number | string): Promise<void>;
+    resume(id: number | string): Promise<void>;
     history(): Promise<TaskHistory[]>;
     upcoming(): Promise<UpcomingTasks>;
     managerStatus(): Promise<unknown>;
@@ -443,7 +443,7 @@ export interface Domains {
     /** Async (202 + Location): fire the audit-record query and poll `tasks.getAsync(taskId)`. */
     listAuditRecords(q?: Q): Promise<{ taskId: string | null; data: unknown }>;
     isAuditingEnabled(): Promise<AuditingEnabled>;
-    setAuditingEnabled(body: { enabled: boolean }): Promise<AuditingEnabled>;
+    setAuditingEnabled(body: { Enabled: boolean }): Promise<AuditingEnabled>;
     /** Purge audit records in [BeginDateTime, EndDateTime] (exact-case body fields). */
     purgeAuditRecords(body: { BeginDateTime: string; EndDateTime: string }): Promise<void>;
     /** Single audit record (exact-case query params). */
@@ -569,11 +569,11 @@ export function createDomains(c: AdminClient): Domains {
       create: (name, body) => c.put<Application>('/v2/web-app', body, { name }),
       update: (name, body) => c.put<Application>('/v2/web-app', body, { name }),
       remove: (name) => c.del<void>('/v2/web-app', { name }),
-      listPctAccess: (name) => c.get<WebAppPctAccess[]>('/v2/web-app/pct-accesses', { name }),
+      listPctAccess: (name) => c.get<WebAppPctAccess[]>('/v2/web-app/pct-accesses', { names: name }),
       removeApp: (name) => c.del<void>('/v2/web-app', { name }),
-      getPctAccess: (name) => c.get<WebAppPctAccess>('/v2/web-app/pct-access', { name }),
-      upsertPctAccess: (name, body) => c.put<WebAppPctAccess>('/v2/web-app/pct-access', body, { name }),
-      removePctAccess: (name) => c.del<void>('/v2/web-app/pct-access', { name }),
+      getPctAccess: (name, allowType, className) => c.get<WebAppPctAccess>('/v2/web-app/pct-access', { name, allowType, class: className }),
+      upsertPctAccess: (name, allowType, className, body) => c.put<WebAppPctAccess>('/v2/web-app/pct-access', body, { name, allowType, class: className }),
+      removePctAccess: (name, allowType, className) => c.del<void>('/v2/web-app/pct-access', { name, allowType, class: className }),
       listSessions: () => c.get<WebSessionList>('/v2/web-sessions'),
       removeSession: (id) => c.del<void>('/v2/web-session', { id }),
       listDocDbs: () => c.get<DocDBApplicationList>('/v2/doc-dbs'),
@@ -699,7 +699,7 @@ export function createDomains(c: AdminClient): Domains {
       getMFTAuthCodeUrl: (connection, q) => c.get<unknown>('/v2/security/mft/connection/auth-code-url', { connection, ...q }),
       updateLDAPConfiguration: (name, body) => c.put<void>('/v2/security/ldap/configuration', { ...body, name }),
       removeLDAPConfiguration: (name) => c.del<void>('/v2/security/ldap/configuration', { name }),
-      searchLdapPassword: (name, body) => c.post<unknown>('/v2/security/ldap/configuration/search-password', body),
+      searchLdapPassword: (name, body) => c.post<unknown>('/v2/security/ldap/configuration/search-password', { LDAPSearchPassword: body.Password }, { name }),
       testLdapLogin: (body) => c.post<void>('/v2/security/ldap/test', body),
       // superservers (write)
       updateSuperserver: (port, body) => c.put<void>('/v2/security/superserver', { ...body, port }),
@@ -814,7 +814,7 @@ export function createDomains(c: AdminClient): Domains {
       getAuditRecord: (utcTimeStamp, systemID, auditIndex) =>
         c.get<AuditRecord>('/v2/security/audit/record', { UTCTimeStamp: utcTimeStamp, SystemID: systemID, AuditIndex: auditIndex }),
       // Async (202 + Location): fire the journal integrity-check task.
-      integrityCheck: (file) => c.postAsync('/v2/journal/file/integrity-check', { file }),
+      integrityCheck: (file) => c.postAsync('/v2/journal/file/integrity-check', {}, { file }),
       // No required params (409 when only one directory).
       switchDir: () => c.post<void>('/v2/journal/switch-dir'),
       // No params — EXECUTES on call.
@@ -834,8 +834,8 @@ export function createDomains(c: AdminClient): Domains {
       // Verified shapes: `name` is the required body field (lowercase) / query param.
       upsertDataServer: (body) => c.put<void>('/v2/ecp/data-server', body),
       removeDataServer: (name) => c.del<void>('/v2/ecp/data-server', { name }),
-      authorizeSslConnection: (name) => c.post<void>('/v2/ecp/application-server-ssl-connection/authorize', { name }),
-      rejectSslConnection: (name) => c.post<void>('/v2/ecp/application-server-ssl-connection/reject', { name }),
+      authorizeSslConnection: (name) => c.post<void>('/v2/ecp/application-server-ssl-connection/authorize', undefined, { name }),
+      rejectSslConnection: (name) => c.post<void>('/v2/ecp/application-server-ssl-connection/reject', undefined, { name }),
       removeSslConnection: (name) => c.del<void>('/v2/ecp/application-server-ssl-connection', { name }),
     },
     extLang: {

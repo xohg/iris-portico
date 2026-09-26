@@ -576,7 +576,7 @@ export class LogsComponent implements OnInit, OnDestroy {
   async saveAuditEnabled(): Promise<void> {
     if (!this.canSecure) return;
     try {
-      await this.admin.client.domains.logs.setAuditingEnabled({ enabled: this.aEnabled });
+      await this.admin.client.domains.logs.setAuditingEnabled({ Enabled: this.aEnabled });
     } catch (e) {
       this.error = this.admin.errorMessage(e);
     }
