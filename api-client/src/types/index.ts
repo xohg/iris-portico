@@ -1189,9 +1189,7 @@ export interface Superserver {
   SystemDefault?: boolean;
 }
 
-export interface SuperserverList {
-
-}
+export type SuperserverList = Superserver[];
 
 export interface SymmetricKeySecret {
 /** Length (in bytes) of the key */
@@ -1340,15 +1338,16 @@ export interface WalletCollection {
   UseResource?: string;
 }
 
-export interface WalletCollectionList {
-
-}
+export type WalletCollectionList = WalletCollection[];
 
 export type WalletSecret = {   Type?: "%Wallet.KeyValue" | "%Wallet.SymmetricKey" | "%Wallet.RSA"; /** Class name used to implement the secret, e.g. %Wallet.KeyValue. Required. */    WalletSecretConfig?: Record<string, any>; /** An object containing properties and values that are appropriate for the given secret type. This object will be passed directly to the Create or Modify method of the class specified in the "Type" field */  };
 
-export interface WalletSecretList {
-
+export interface WalletSecretListItem {
+  Name?: string;
+  Type?: string;
 }
+
+export type WalletSecretList = WalletSecretListItem[];
 
 export interface WebAppPctAccess {
 /** Allow access. False - Don't allow access to the class/Package. True - Allow access to the class/Package. Required. */
@@ -1399,6 +1398,4 @@ export interface X509CredentialCertificate {
   ValidityNotAfter?: string;
 }
 
-export interface X509CredentialsList {
-
-}
+export type X509CredentialsList = X509Credential[];
