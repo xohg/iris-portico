@@ -43,11 +43,9 @@ __pycache__/
 # Docker
 docker-data/
 
-# E2E tooling (large local Node installs) and test output
-e2e/tools/
-e2e/out/
-e2e/vid-test/
-e2e/video/
+# Local dev tooling and docs (kept out of the repo; local-only)
+e2e/
+docs/
 out/
 
 # Local session / scratch documents
