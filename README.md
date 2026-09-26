@@ -149,9 +149,8 @@ on port 80, which also proxies `/api/admin` to IRIS's built-in web server on
 52773. Because the SPA and the API share the same origin (port 80), the browser
 calls `/api/admin` directly with **JWT** (obtained from `POST /login`, with
 Basic auth as a fallback for older instances) and no CORS is involved. This
-deliberately decouples frontend delivery from IRIS web-app registration (which
-is unreliable on some Community Edition image builds) — the portal works even
-if the ObjectScript BFF never loads.
+deliberately decouples frontend delivery from IRIS web-app registration — the
+portal works even if the ObjectScript BFF never loads.
 
 **3. The shell is a component, not the app root.** `app.component.ts` is a bare
 `<router-outlet />`. The authenticated chrome (sidebar + top bar) lives in a
@@ -190,7 +189,7 @@ around all of them:
 |----------|----------|-----------------|
 | `GET /v2/security/sql-privileges` | Returns `400` on a fresh instance (no grants exist yet) | The SQL Privileges tab shows the query/grant/revoke tools; the list loads only after the first grant exists |
 | `POST /v2/security/audit/records` | Returns `202` with an empty body (asynchronous) | The Log Center treats it as "accepted, no inline result" and keeps polling the audit list |
-| BFF web-app registration (`/csp/portico-api`) | A `404` on an *older* running container means that container was built from a previous image whose setup registered the then-current app names; a fresh `docker compose up --build` registers the current `portico` / `portico-api` names. Registration itself is a standard `Security.Applications` registry write and is reliable — the setup runs it best-effort (with a timeout guard) only because the `iris session` provisioning step can occasionally be interrupted on some image builds | By design: nginx serves the SPA and proxies `/api/admin`, so the BFF is a bonus, not a dependency |
+| BFF web-app registration (`/csp/portico-api`) | A `404` on an *older* running container means that container was built from a previous image whose setup registered the then-current app names; a fresh `docker compose up --build` registers the current `/csp/portico` / `/csp/portico-api` names (web-app names must start with `/` — a name without a leading slash is registered but never matched by the built-in web server). Registration itself is a standard `Security.Applications` registry write and is reliable — the setup runs it best-effort (with a timeout guard) only because the `iris session` provisioning step can occasionally be interrupted on some image builds | By design: nginx serves the SPA and proxies `/api/admin`, so the BFF is a bonus, not a dependency |
 | `Enabled` on `GET /v2/web-apps` | Runtime gateway state, not configuration: after a container restart IRIS takes ~1 minute to bring the web-server gateways up, so values flap `false → true` during startup | Expected, not a bug — the list refreshes and the badges settle to `on` |
  | `POST /login` (occasionally) | Intermittently returns `401` with an empty body under rapid repeated logins (a 2026.2 quirk; a single login is reliable) | The login form retries, and falls back to Basic auth if the JWT `401`s — the user is never locked out |
 

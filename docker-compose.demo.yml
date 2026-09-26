@@ -8,7 +8,7 @@
 # No nginx: the IRIS built-in web server (port 52773) serves everything —
 # the Angular SPA via the "portico" web app (Fallback=index.html for SPA
 # deep links) and the system API at /api/admin. Same origin, no proxy, no
-# extra packages. The "portico-api" BFF web app is registered best-effort
+# extra packages. The "/csp/portico-api" BFF web app is registered best-effort
 # as before (bonus, non-fatal).
 #
 # Production mode (nginx in front on :80): see docker-compose.yml.

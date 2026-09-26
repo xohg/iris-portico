@@ -26,11 +26,13 @@ Method Run()
 
     // 1. Angular frontend (the UI is served from here in demo mode; in
     //    production nginx serves the same files, so this is a bonus there).
-    do ..EnsureWebApp("portico", "/portico/", "/irisdev/web", "")
+    //    Web-application names must start with "/" (Security.Applications
+    //    docs); the name IS the URL the built-in web server routes to.
+    do ..EnsureWebApp("/csp/portico", "/csp/portico/", "/irisdev/web", "")
 
     // 2. BFF (best-effort; non-fatal on failure).
     try {
-        do ..EnsureWebApp("portico-api", "/portico-api/", "", "portico.Web.Api")
+        do ..EnsureWebApp("/csp/portico-api", "/csp/portico-api/", "", "portico.Web.Api")
     } catch ex {
         write !,"[portico.Install] BFF web app registration skipped (non-fatal): ", ex.Message
     }
@@ -46,6 +48,11 @@ Method Run()
 ///   (name, wpath, ppath, web, ssl, https, dispatch)
 /// Only these seven arguments are used, so no unverified trailing argument is
 /// passed (Security.Applications has no "fallback" property).
+///
+/// IMPORTANT: `name` must start with "/" — per the Security.Applications
+/// docs ("Web applications should start with a '/'"), the name is the URL
+/// path the built-in web server routes to. A name without a leading slash
+/// (e.g. "portico") is registered but never matched, so the app 404s.
 Method EnsureWebApp(name As %String, wpath As %String, ppath As %String, dispatch As %String)
 {
     if $system.WebApplication.GetApplication(name) {
