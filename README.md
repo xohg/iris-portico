@@ -274,6 +274,7 @@ frontend's `<base href="auto">` resolves asset paths correctly in both modes.
 │   ├── Service/LogAggregator.cls     server-side log aggregation
 │   └── UnitTest.cls                  %UnitTest cases (run inside IRIS)
 └── src/web/                          Angular 18 frontend (standalone components)
+    ├── public/                       static assets (favicon + logo, served at the app root)
     └── src/app/
         ├── core/                     AdminService, AuthService, PermissionService,
         │                               ThemeService, I18nService, coalesce, auth guard

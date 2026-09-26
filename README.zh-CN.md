@@ -253,6 +253,7 @@ http://localhost:52773/csp/portico/
 │   ├── Service/LogAggregator.cls     服务端日志聚合
 │   └── UnitTest.cls                  %UnitTest 用例（在 IRIS 内运行）
 └── src/web/                          Angular 18 前端（独立组件）
+    ├── public/                       静态资源（favicon + logo，随应用根提供）
     └── src/app/
         ├── core/                     AdminService、AuthService、PermissionService、
         │                               ThemeService、I18nService、coalesce、认证守卫

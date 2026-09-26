@@ -51,9 +51,6 @@ dev.md
 .entrypoint.sh
 iris.script
 mainspec_v2.json
-iris-portico-icon.svg
-iris-portico-logo.svg
-iris-portico-logo-dark.svg
 
 # Local session / scratch documents
 HANDOVER.md

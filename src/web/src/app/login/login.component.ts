@@ -11,7 +11,11 @@ import { I18nService } from '../core/i18n.service';
   template: `
     <div class="login-wrap">
       <form class="card login-card" (ngSubmit)="submit()">
-        <h1>◈ {{ t('login.title') }}</h1>
+        <div class="login-logo">
+          <img class="logo-light" src="iris-portico-logo.svg" alt="IRIS Portico" />
+          <img class="logo-dark" src="iris-portico-logo-dark.svg" alt="IRIS Portico" />
+        </div>
+        <h1>{{ t('login.title') }}</h1>
         <p class="muted">{{ t('login.subtitle') }}</p>
         @if (busy) { <p class="muted">{{ t('login.submitting') }}</p> }
         @if (error) { <p class="error">{{ error }}</p> }

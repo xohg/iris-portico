@@ -29,7 +29,7 @@ interface NavItem {
       @if (layout === 'side') {
         <aside class="sidebar">
           <div class="brand">
-            <span class="brand-mark">◈</span>
+            <img class="brand-mark" src="iris-portico-icon.svg" alt="" />
             @if (!collapsed) {
               <div>
                 <h1>{{ t('shell.brand') }}</h1>
