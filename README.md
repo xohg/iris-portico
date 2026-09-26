@@ -77,21 +77,6 @@ reads the current user's privileges from `GET /info` and **enables or hides each
 action accordingly** — a user without `%Admin_Secure` simply won't see the user/
 role management controls. The top bar shows how many privileges the session holds.
 
-### API coverage (276-operation v2 surface)
-
-The IRIS 2026.2 SysAdmin API exposes **276 operations** across 39 functional areas
-(`mainspec_v2.json`). The portal now exercises **265 of them (96.0%)** — every
-functional area is represented by a page. The full catalog, marked ✅/— per
-operation, plus a feature-parity comparison against the official IRIS management
-portal (`%CSP.UI.Portal`), lives in
-**[`docs/API-CATALOG.md`](docs/API-CATALOG.md)**.
-
-The 11 remaining unused operations are low-value: the three SQL-privilege
-`HEAD` probes, `POST /v2/security/oauth2/revoke`, the four
-`v2/fs-access-purpose` mutation endpoints (the portal leaves FS access
-read-only), and the two `v2/monitor` dashboard sub-endpoints
-(`dashboard/ecp`, `dashboard/globals-and-routines`).
-
 ---
 
 ## Architecture

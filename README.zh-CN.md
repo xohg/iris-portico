@@ -72,19 +72,6 @@ SysAdmin API 对每个操作都以 `%Admin_*` 权限做门禁。IRIS Portico 从
 `%Admin_Secure` 的用户根本看不到用户 / 角色管理控件。顶部栏显示当前会话
 持有多少权限。
 
-### API 覆盖（276 个操作的 v2 面）
-
-IRIS 2026.2 的 SysAdmin API 在 39 个功能领域共暴露 **276 个操作**
-（`mainspec_v2.json`）。本门户现已使用其中 **265 个（96.0%）**——每个功能领域
-都有对应页面。完整目录按操作标注 ✅/—，并附与官方 IRIS 管理门户
-（`%CSP.UI.Portal`）的功能对齐对比，见
-**[`docs/API-CATALOG.md`](docs/API-CATALOG.md)**。
-
-剩余 11 个未使用的操作价值较低：三个 SQL 权限 `HEAD` 探测、
-`POST /v2/security/oauth2/revoke`、四个 `v2/fs-access-purpose` 变更端点
-（门户将文件系统访问保持只读），以及两个 `v2/monitor` 仪表盘子端点
-（`dashboard/ecp`、`dashboard/globals-and-routines`）。
-
 ---
 
 ## 架构
