@@ -2,9 +2,7 @@
 
 > **Language / 语言**: [English](README.md) · [简体中文](README.zh-CN.md)
 
-A **permission-aware Management Portal** for InterSystems IRIS, built for the
-[InterSystems Programming Contest #48](https://openexchange.intersystems.com/contest/48)
-(*"Build Your Own Management Portal"*).
+A **permission-aware Management Portal** for InterSystems IRIS.
 
 IRIS Portico gives administrators a single, secure, role-aware console to manage
 everything the IRIS SysAdmin API (`/api/admin`) exposes — with a focus on the
@@ -142,8 +140,8 @@ Two design decisions stand out.
 (JWT with basic fallback), the `BaseResponse` envelope unwrapping, error
 mapping (401/403/404/409), the 142 generated types, and the 13 domain groups —
 live in `@iris-portico/api-client`. The Angular app is a thin layer on top.
-This is what makes it easy to ship **React or Vue variants later** (see
-[Roadmap](#roadmap)): they just consume the same client.
+This is what makes it easy to ship **React or Vue variants later**: they just
+consume the same client.
 
 **2. nginx in front of IRIS.** The frontend is served as a static SPA by nginx
 on port 80, which also proxies `/api/admin` to IRIS's built-in web server on
@@ -180,21 +178,6 @@ transition).
 > 2026.1 the API reports `apiVersion: 1` and the `/v2/*` paths return `404`,
 > so the six functional-area screens would have nothing to call. The Dockerfile is
 > pinned to `intersystemsdc/iris-community:2026.2` for this reason.
-
-### Known API limitations (2026.2)
-
-A few SysAdmin API behaviors are worth knowing — the portal degrades gracefully
-around all of them:
-
-| Endpoint | Behavior | Portal handling |
-|----------|----------|-----------------|
-| `GET /v2/security/sql-privileges` | Returns `400` on a fresh instance (no grants exist yet) | The SQL Privileges tab shows the query/grant/revoke tools; the list loads only after the first grant exists |
-| `POST /v2/security/audit/records` | Returns `202` with an empty body (asynchronous) | The Log Center treats it as "accepted, no inline result" and keeps polling the audit list |
-| BFF web-app registration (`/csp/portico-api`) | A `404` on an *older* running container means that container was built from a previous image whose setup registered the then-current app names; a fresh `docker compose up --build` registers the current `/csp/portico` / `/csp/portico-api` names (web-app names must start with `/` — a name without a leading slash is registered but never matched by the built-in web server). Registration itself is a standard `Security.Applications` registry write and is reliable — the setup runs it best-effort (with a timeout guard) only because the `iris session` provisioning step can occasionally be interrupted on some image builds | By design: nginx serves the SPA and proxies `/api/admin`, so the BFF is optional, not a dependency |
-| `Enabled` on `GET /v2/web-apps` | Runtime gateway state, not configuration: after a container restart IRIS takes ~1 minute to bring the web-server gateways up, so values flap `false → true` during startup | Expected, not a bug — the list refreshes and the badges settle to `on` |
- | `POST /login` (occasionally) | Intermittently returns `401` with an empty body under rapid repeated logins (a 2026.2 quirk; a single login is reliable) | The login form retries, and falls back to Basic auth if the JWT `401`s — the user is never locked out |
-
----
 
 ## Quick start (Docker, one command)
 
@@ -342,53 +325,6 @@ The ObjectScript unit tests (`portico.UnitTest`) run inside IRIS:
 set $namespace = "portico"
 do ##class(%UnitTest.Run).Run("portico.UnitTest")
 ```
-
----
-
-## Demo / video
-
-A short walkthrough (≈ 4–5 min) that covers, in order:
-
-1. **Sign in** — the login form authenticates against `/api/admin` (JWT, with
-   basic-auth fallback for older instances); the top bar shows the session's
-   held privileges.
-2. **Dashboard** — server identity, live system usage, resource counts, and the
-   privilege list that drives what's enabled.
-3. **Security & Secrets** (a key focus) — walk through Wallet → X.509 →
-   OAuth 2.0 → SSL → Encryption, showing the permission gating (controls appear
-   only when the session holds the matching `%Admin_*` privilege).
-4. **Log Center** — the unified, time-ordered stream across system status,
-   security audit, and journal activity, with source filtering and auto-refresh.
-5. **Async Task Center** — a long-running operation's `202 + Location` result,
-   polled live, with cancel / pause / resume.
-6. **System & Tasks** — process control (suspend/resume/terminate) and task
-   run/suspend/resume.
-
-*(The video is recorded against `docker compose up --build` and the default
-`Portico / Portico123` credentials.)*
-
----
-
-## Roadmap
-
-- ~~**Wider API coverage**~~ **✅ DONE** — the portal now uses 265 of 276 v2
-  operations (96.0%); the full catalog is in
-  [`docs/API-CATALOG.md`](docs/API-CATALOG.md). Built across this effort: the
-  **Databases** page, **journal/audit deepening** (Logs), **device settings +
-  process broadcast** (System), the **ECP** and **Language Servers** pages,
-  **encryption keys / OAuth 2.0 config / filesystem access purposes**
-  (Security), plus the **Namespaces**, **License**, and **WQM** pages, full
-  **task CRUD**, and the complete **Security write block** (user/role/resource/
-  service CRUD, SQL admin+column privileges, wallet secret upsert, X.509 / MFT /
-  LDAP / superserver / privileged-routine CRUD, audit-event CRUD).
-- **React and Vue variants** — consume the same `@iris-portico/api-client`
-  (the shared foundation already exists; only the thin UI layer changes).
-- **More locales** (the runtime-dictionary i18n makes adding a language a
-  single JSON/TS file) and **more themes** (each theme is one CSS token block).
-- **Stronger sign-in options**: MFA (TOTP), captcha, password-complexity policy,
-  single-session enforcement, lockout after N failures, IP allow-listing.
-- **Audit of portal actions** (who did what, from the portal).
-- **Deeper log-center filters** (by event, user, time range) and export.
 
 ---
 

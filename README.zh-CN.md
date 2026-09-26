@@ -2,9 +2,7 @@
 
 > **Language / 语言**: [English](README.md) · [简体中文](README.zh-CN.md)
 
-**IRIS Portico** 是面向 InterSystems IRIS 的**权限感知（permission-aware）管理门户**，为
-[InterSystems 编程大赛 #48](https://openexchange.intersystems.com/contest/48)
-（*"Build Your Own Management Portal"*）而构建。
+**IRIS Portico** 是面向 InterSystems IRIS 的**权限感知（permission-aware）管理门户**。
 
 IRIS Portico 为管理员提供一个统一、安全、按角色感知的控制台，用于管理 IRIS SysAdmin API
 （`/api/admin`）所暴露的一切，并重点覆盖现有门户普遍服务不足的两大领域：**安全与密钥
@@ -135,8 +133,7 @@ IRIS 2026.2 的 SysAdmin API 在 39 个功能领域共暴露 **276 个操作**
 （带 basic 回退的 JWT）、`BaseResponse` 信封解包、错误
 映射（401/403/404/409）、142 个生成类型、13 个领域分组——都位于
 `@iris-portico/api-client` 中。Angular 应用只是其上的薄层。
-正因如此，之后**推出 React 或 Vue 变体**才会如此轻松（见
-[路线图](#roadmap)）：它们只需消费同一个客户端。
+正因如此，之后**推出 React 或 Vue 变体**才会如此轻松：它们只需消费同一个客户端。
 
 **2. nginx 位于 IRIS 之前。** 前端由 nginx 作为静态 SPA 提供，位于端口 80，
 同时把 `/api/admin` 代理到 IRIS 内建 Web 服务器的 52773 端口。由于 SPA 与
@@ -165,20 +162,6 @@ Web 应用注册解耦——即使 ObjectScript BFF 从未加载，门户也能�
 > 以及 JWT `POST /login` 端点）只在 2026.2+ 中存在。在 2026.1 上，API 报告
 > `apiVersion: 1`，`/v2/*` 路径返回 `404`，因此六个功能领域屏幕将无 API 可调。
 > Dockerfile 为此固定为 `intersystemsdc/iris-community:2026.2`。
-
-### 已知 API 限制（2026.2）
-
-有几个 SysAdmin API 的行为值得了解——门户对它们全部做了优雅降级：
-
-| 端点 | 行为 | 门户处理 |
-|----------|----------|-----------------|
-| `GET /v2/security/sql-privileges` | 全新实例上返回 `400`（尚无任何授权） | SQL 权限标签页展示查询 / 授权 / 回收工具；列表只在存在首个授权后加载 |
-| `POST /v2/security/audit/records` | 返回 `202` 且响应体为空（异步） | 日志中心将其视为"已接受，无内联结果"，并持续轮询审计列表 |
-| BFF Web 应用注册（`/csp/portico-api`） | 在*旧的*运行中的容器上出现 `404`，说明该容器由旧镜像构建，其 setup 注册的是当时的应用名；一次新的 `docker compose up --build` 会注册当前的 `/csp/portico` / `/csp/portico-api` 名（Web 应用名必须以 `/` 开头——没有前导斜杠的名字会被注册，但内建 Web 服务器永远不会匹配到它）。注册本身是标准的 `Security.Applications` 注册表写入，是可靠的——setup 之所以以尽力（best-effort，带超时保护）方式运行，只是因为在某些镜像构建上 `iris session` 供给步骤偶尔会被打断 | 按设计：nginx 提供 SPA 并代理 `/api/admin`，因此 BFF 是可选组件，而非依赖项 |
-| `GET /v2/web-apps` 的 `Enabled` | 运行时网关状态，而非配置：容器重启后 IRIS 需要约 1 分钟才能把 Web 服务器网关拉起，因此启动期间取值会在 `false → true` 间抖动 | 属预期而非 bug——列表会刷新，徽章最终稳定为 `on` |
-| `POST /login`（偶发） | 在快速连续登录时偶发返回 `401` 且响应体为空（2026.2 的怪癖；单次登录可靠） | 登录表单会重试，并在 JWT `401` 时回退到 Basic 认证——用户绝不会被锁在外面 |
-
----
 
 ## 快速开始（Docker，一条命令）
 
@@ -319,47 +302,6 @@ ObjectScript 单元测试（`portico.UnitTest`）在 IRIS 内运行：
 set $namespace = "portico"
 do ##class(%UnitTest.Run).Run("portico.UnitTest")
 ```
-
----
-
-## 演示 / 视频
-
-一段简短的走查（约 4–5 分钟），按顺序覆盖：
-
-1. **登录** — 登录表单对 `/api/admin` 认证（JWT，旧实例回退到 basic 认证）；
-   顶部栏显示会话持有的权限。
-2. **仪表盘** — 服务器身份、实时系统用量、资源计数，以及驱动"哪些被启用"的
-   权限列表。
-3. **安全与密钥**（重点功能）— 走查 Wallet → X.509 → OAuth 2.0 → SSL →
-   Encryption，展示权限门禁（只有当会话持有匹配的 `%Admin_*` 权限时，控件才出现）。
-4. **日志中心** — 跨系统状态、安全审计、journal 活动的统一、按时间排序的流，
-   支持来源过滤与自动刷新。
-5. **异步任务中心** — 一个长时运行操作的 `202 + Location` 结果，实时轮询，
-   支持取消 / 暂停 / 恢复。
-6. **系统与任务** — 进程控制（挂起 / 恢复 / 终止）与任务运行 / 挂起 / 恢复。
-
-*（视频基于 `docker compose up --build` 与默认的 `Portico / Portico123` 凭据录制。）*
-
----
-
-## 路线图
-
-- ~~**更广的 API 覆盖**~~ **✅ 已完成** — 门户现使用 276 个 v2 操作中的 265 个
-  （96.0%）；完整目录见 [`docs/API-CATALOG.md`](docs/API-CATALOG.md)。本次工作
-  中构建的有：**数据库**页面、**journal/audit 深化**（日志）、**设备设置 +
-  进程广播**（系统）、**ECP** 与**语言服务器**页面、**加密密钥 / OAuth 2.0
-  配置 / 文件系统访问用途**（安全），以及**命名空间**、**许可证**、**WQM**
-  页面、完整的**任务 CRUD**，和完整的**安全写操作块**（用户 / 角色 / 资源 /
-  服务 CRUD、SQL 管理员 + 列权限、钱包密钥 upsert、X.509 / MFT / LDAP /
-  superserver / 特权例程 CRUD、审计事件 CRUD）。
-- **React 与 Vue 变体** — 消费同一个 `@iris-portico/api-client`
-  （共享基础已存在；只换薄 UI 层）。
-- **更多语言区**（运行时字典 i18n 使新增一种语言只需一个 JSON/TS 文件）以及
-  **更多主题**（每个主题就是一组 CSS token 块）。
-- **更强的登录选项**：MFA（TOTP）、验证码、密码复杂度策略、单会话强制、
-  N 次失败后锁定、IP 白名单。
-- **门户操作审计**（谁、从门户、做了什么）。
-- **更深的日志中心过滤**（按事件、用户、时间范围）与导出。
 
 ---
 
