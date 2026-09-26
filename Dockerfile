@@ -39,11 +39,20 @@ COPY src/cls /irisdev/src
 # at /irisdev/web in case an IRIS web app is registered to serve it).
 COPY --from=web /app/src/web/dist/portico-web/browser /irisdev/web
 
-# nginx serves the Angular SPA on :80 and proxies /api/admin to the built-in
-# IRIS web server on :52773. This decouples frontend delivery from IRIS web-app
-# registration (unreliable on this build): the frontend and the API share the
-# same origin (port 80), so the frontend calls /api/admin with Basic auth and
-# no CORS is involved. curl is used by the HEALTHCHECK.
+# Deployment modes (build arg):
+#   INSTALL_NGINX=1 (default, production) — nginx serves the Angular SPA on
+#   :80 and proxies /api/admin to the built-in IRIS web server on :52773.
+#   This decouples frontend delivery from IRIS web-app registration
+#   (unreliable on some builds): the frontend and the API share the same
+#   origin (port 80), so the frontend calls /api/admin and no CORS is
+#   involved.
+#   INSTALL_NGINX=0 (demo, minimal install) — no nginx; the IRIS built-in web
+#   server serves everything: the SPA via the "portico" web app
+#   (http://host:52773/csp/portico/, Fallback=index.html for SPA deep links)
+#   and the API at /api/admin — same origin, no proxy, no extra packages.
+ARG INSTALL_NGINX=1
+
+# curl is used by the HEALTHCHECK in both modes.
 #
 # The IRIS image's default user is irisowner (non-root), so apt-get must run as
 # root; switch back to irisowner for the remaining (IRIS-owned) steps.
@@ -52,8 +61,10 @@ USER root
 # metadata update and the .deb downloads), so the whole update+install sequence
 # is wrapped in a retry loop.
 RUN ok=0; for i in 1 2 3 4 5 6; do \
+        pkgs="curl"; \
+        if [ "$INSTALL_NGINX" = "1" ]; then pkgs="nginx curl"; fi; \
         if apt-get update \
-           && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx curl; then \
+           && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $pkgs; then \
             ok=1; break; \
         else \
             echo "apt failed (attempt $i), retrying in 5s..."; sleep 5; \
@@ -61,18 +72,23 @@ RUN ok=0; for i in 1 2 3 4 5 6; do \
     done; \
     [ "$ok" = "1" ] \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /dev/null /var/log/nginx/access.log \
-    && ln -sf /dev/null /var/log/nginx/error.log
+    && if [ "$INSTALL_NGINX" = "1" ]; then \
+         ln -sf /dev/null /var/log/nginx/access.log \
+         && ln -sf /dev/null /var/log/nginx/error.log; \
+       fi
 COPY nginx-portico.conf /etc/nginx/sites-available/portico
-RUN ln -sf /etc/nginx/sites-available/portico /etc/nginx/sites-enabled/portico \
-    && rm -f /etc/nginx/sites-enabled/default
 # nginx is started by the (non-root) setup script, so it must run as the
 # default user (irisowner). Two adjustments make that work:
 #   - CAP_NET_BIND_SERVICE lets a non-root process bind privileged port 80
 #   - the pid file moves from /run (root-only) to /tmp (world-writable)
-RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
-    && sed -i 's|pid /run/nginx.pid;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
-    && chown -R irisowner:irisowner /var/lib/nginx
+# (Skipped entirely in demo mode, where nginx is not installed.)
+RUN if [ "$INSTALL_NGINX" = "1" ]; then \
+      ln -sf /etc/nginx/sites-available/portico /etc/nginx/sites-enabled/portico \
+      && rm -f /etc/nginx/sites-enabled/default \
+      && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
+      && sed -i 's|pid /run/nginx.pid;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
+      && chown -R irisowner:irisowner /var/lib/nginx; \
+    fi
 # Back to the image's default user: IRIS's registry files are owned by
 # irisowner, and the `iris` CLI refuses to start an instance whose registry
 # ownership does not match the running user ("Invalid registry ownership").
@@ -89,8 +105,11 @@ COPY --chmod=755 portico-setup.sh /docker-entrypoint-initdb.d/00-portico-setup.s
 EXPOSE 52773
 EXPOSE 80
 
+# Production: the nginx front on :80 must answer. Demo: nginx is absent, so
+# probe the IRIS built-in web server on :52773 (any non-5xx response — even a
+# 404 page — proves the web server is up).
 HEALTHCHECK --interval=30s --timeout=15s --start-period=90s --retries=5 \
-  CMD curl -sf http://localhost:80/ >/dev/null || exit 1
+  CMD sh -c 'if command -v nginx >/dev/null 2>&1; then curl -sf http://localhost:80/ >/dev/null; else code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:52773/ 2>/dev/null); [ "$code" -lt 500 ]; fi'
 
 # Start IRIS (the base image's entrypoint keeps the container alive with
 # "iris"; "iris run" is NOT a valid subcommand). The "--after" hook runs our

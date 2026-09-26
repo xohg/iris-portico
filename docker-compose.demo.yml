@@ -1,0 +1,40 @@
+# IRIS Portico — demo mode (minimal install, IRIS built-in web server only)
+#
+#   docker compose -f docker-compose.demo.yml up --build
+#
+# Then open:  http://localhost:52773/csp/portico/
+# Login:      Portico / Portico123   (in the app's login form)
+#
+# No nginx: the IRIS built-in web server (port 52773) serves everything —
+# the Angular SPA via the "portico" web app (Fallback=index.html for SPA
+# deep links) and the system API at /api/admin. Same origin, no proxy, no
+# extra packages. The "portico-api" BFF web app is registered best-effort
+# as before (bonus, non-fatal).
+#
+# Production mode (nginx in front on :80): see docker-compose.yml.
+
+services:
+  portico:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_NGINX: "0"
+    image: iris-portico-demo:latest
+    container_name: iris-portico-demo
+    ports:
+      - "52773:52773"  # IRIS web server: SPA (/csp/portico/) + /api/admin
+    environment:
+      - CSENV=1
+      - IRISNAME=Portico
+      - IRISMANAGER=Portico
+      - IRISMANAGERPASSWORD=Portico123
+      - IRISUSERNAME=Portico
+      - IRISUSERPASSWORD=Portico123
+    healthcheck:
+      test: ["CMD-SHELL", "code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:52773/ 2>/dev/null); [ \"$code\" -lt 500 ]"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped

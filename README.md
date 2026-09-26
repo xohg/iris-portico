@@ -251,12 +251,38 @@ The container:
 > the Log Center falls back to client-side aggregation, and all CRUD + auth go
 > straight to `/api/admin`.
 
+### Demo mode (minimal — IRIS built-in web server only)
+
+For a minimal-footprint demo, skip nginx entirely and let IRIS's built-in web
+server serve everything:
+
+```bash
+docker compose -f docker-compose.demo.yml up --build
+```
+
+Then open:
+
+```
+http://localhost:52773/csp/portico/
+```
+
+Sign in with the same `Portico / Portico123` credentials.
+
+In this mode the `portico` web app serves the Angular SPA (with
+`Fallback=index.html`, so SPA deep links such as `/csp/portico/tasks`
+resolve) and the frontend calls `/api/admin` directly on the same origin —
+no proxy, no extra packages. The `Dockerfile` build arg `INSTALL_NGINX=0`
+skips the nginx install; the default `docker-compose.yml` keeps the
+production layout (nginx on `:80`). The frontend's `<base href="auto">`
+resolves asset paths correctly in both modes.
+
 ---
 
 ## Repository layout
 
 ```
-├── Dockerfile / docker-compose.yml   one-command run (nginx + IRIS)
+├── Dockerfile / docker-compose.yml   one-command run (nginx + IRIS, production)
+├── docker-compose.demo.yml           demo mode (IRIS built-in web server only)
 ├── nginx-portico.conf               SPA on :80 + /api/admin proxy
 ├── portico-setup.sh                 start-of-container provisioning (user + BFF)
 ├── iris.script                       namespace + class load + web-app setup
