@@ -190,7 +190,7 @@ around all of them:
 |----------|----------|-----------------|
 | `GET /v2/security/sql-privileges` | Returns `400` on a fresh instance (no grants exist yet) | The SQL Privileges tab shows the query/grant/revoke tools; the list loads only after the first grant exists |
 | `POST /v2/security/audit/records` | Returns `202` with an empty body (asynchronous) | The Log Center treats it as "accepted, no inline result" and keeps polling the audit list |
-| BFF web-app registration (`/csp/portico-api`) | `404` on some Community Edition image builds (web-app registration is unreliable) | By design: nginx serves the SPA and proxies `/api/admin`, so the BFF is a bonus, not a dependency |
+| BFF web-app registration (`/csp/portico-api`) | A `404` on an *older* running container means that container was built from a previous image whose setup registered the then-current app names; a fresh `docker compose up --build` registers the current `portico` / `portico-api` names. Registration itself is a standard `Security.Applications` registry write and is reliable — the setup runs it best-effort (with a timeout guard) only because the `iris session` provisioning step can occasionally be interrupted on some image builds | By design: nginx serves the SPA and proxies `/api/admin`, so the BFF is a bonus, not a dependency |
 | `Enabled` on `GET /v2/web-apps` | Runtime gateway state, not configuration: after a container restart IRIS takes ~1 minute to bring the web-server gateways up, so values flap `false → true` during startup | Expected, not a bug — the list refreshes and the badges settle to `on` |
  | `POST /login` (occasionally) | Intermittently returns `401` with an empty body under rapid repeated logins (a 2026.2 quirk; a single login is reliable) | The login form retries, and falls back to Basic auth if the JWT `401`s — the user is never locked out |
 
@@ -268,13 +268,22 @@ http://localhost:52773/csp/portico/
 
 Sign in with the same `Portico / Portico123` credentials.
 
-In this mode the `portico` web app serves the Angular SPA (with
-`Fallback=index.html`, so SPA deep links such as `/csp/portico/tasks`
-resolve) and the frontend calls `/api/admin` directly on the same origin —
-no proxy, no extra packages. The `Dockerfile` build arg `INSTALL_NGINX=0`
-skips the nginx install; the default `docker-compose.yml` keeps the
-production layout (nginx on `:80`). The frontend's `<base href="auto">`
-resolves asset paths correctly in both modes.
+In this mode the `portico` web app serves the Angular SPA as static files
+(the `ServeFiles` web-app setting, on by default, lets the IRIS built-in web
+server serve files from the app's physical path) and the frontend calls
+`/api/admin` directly on the same origin — no proxy, no extra packages. The
+`Dockerfile` build arg `INSTALL_NGINX=0` skips the nginx install; the default
+`docker-compose.yml` keeps the production layout (nginx on `:80`). The
+frontend's `<base href="auto">` resolves asset paths correctly in both modes.
+
+> **One demo-mode limitation:** IRIS web-application definitions
+> (`Security.Applications`) have no "fallback" setting, so the built-in web
+> server does not auto-redirect SPA deep links (e.g. `/csp/portico/tasks`)
+> to `index.html`. Enter via the app root —
+> `http://localhost:52773/csp/portico/` — which serves `index.html`; the
+> client-side router then handles all in-app navigation. (In production,
+> nginx's `try_files ... /index.html` provides the fallback, so deep links
+> work there.)
 
 ---
 
