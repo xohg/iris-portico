@@ -7,6 +7,12 @@
 **/.git
 **/.build-log.txt
 **/*.log
+
+# Test tooling and docs — never needed in the image. Excluding e2e/ keeps
+# the build context small (e2e/tools alone is a ~100 MB local Node install).
+e2e/
+docs/
+out/
 mainspec_v2.json
 api-client/package-lock.json
 src/web/package-lock.json
