@@ -1,5 +1,7 @@
 # IRIS Portico — Management Portal
 
+> **Language / 语言**: [English](README.md) · [简体中文](README.zh-CN.md)
+
 A **permission-aware Management Portal** for InterSystems IRIS, built for the
 [InterSystems Programming Contest #48](https://openexchange.intersystems.com/contest/48)
 (*"Build Your Own Management Portal"*).
@@ -218,8 +220,9 @@ The container:
 1. builds the Angular frontend (Node stage),
 2. starts **nginx** (serves the SPA on `:80`, proxies `/api/admin` → IRIS `:52773`),
 3. creates the `Portico` user (so `/api/admin` **JWT + Basic auth** work),
-4. best-effort loads the ObjectScript BFF and registers `/csp/portico-api/`
-   (health + server-side log aggregation).
+4. registers the web apps directly (a security operation that persists) and
+   best-effort provisions the ObjectScript BFF (`/csp/portico-api/` — health
+   + server-side log aggregation).
 
 > The BFF is a **bonus**. If it fails to load, the portal is fully functional —
 > the Log Center falls back to client-side aggregation, and all CRUD + auth go
