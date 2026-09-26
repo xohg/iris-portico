@@ -11,17 +11,16 @@ everything the IRIS SysAdmin API (`/api/admin`) exposes — with a focus on the
 areas most existing portals under-serve: **security & secrets** and a unified
 **log center**.
 
-> **Original work.** This project is built from scratch against the public
+> **Built from scratch** against the public
 > [`sysadmin-api-specification`](https://github.com/intersystems-community/sysadmin-api-specification).
-> Nothing is copied from other contest entries.
 
 ---
 
 ## What it does
 
-The portal covers all **six required task areas**, mapped to the SysAdmin API:
+The portal covers all **six core functional areas**, mapped to the SysAdmin API:
 
-| Task area | What you can do | Backing API |
+| Functional area | What you can do | Backing API |
 |-----------|-----------------|-------------|
 | **Web Apps & REST** | List/create/enable web applications, inspect PCT access, manage web sessions & namespaces | `/v2/web-apps`, `/v2/web-sessions`, `/v2/namespaces` |
 | **Permission management** | Manage users, roles, resources, services, SQL privileges, web authentication | `/v2/security/users`, `/roles`, `/resources`, `/services`, `/sql-privileges` |
@@ -30,7 +29,7 @@ The portal covers all **six required task areas**, mapped to the SysAdmin API:
 | **System management** | Inspect & control processes, devices, system usage, locks, databases | `/v2/processes`, `/v2/devices`, `/v2/monitor/*`, `/v2/locks`, `/v2/databases` |
 | **Logs** | A **unified Log Center** aggregating system status + security audit + journal activity into one time-ordered stream, plus **journal** (files, file detail, async record browser, settings) and **audit** (enable toggle, event definitions, async record query, purge) deep-dives | `/v2/journal/*`, `/v2/security/audit/*`, `/v2/monitor/*` |
 
-Plus a first-class **Async Task Center** for long-running operations (the
+Plus a dedicated **Async Task Center** for long-running operations (the
 `202 + Location` pattern) with cancel / pause / resume — and a full set of
 management pages:
 
@@ -115,7 +114,7 @@ read-only), and the two `v2/monitor` dashboard sub-endpoints
 │   I18nService (runtime zh/en dictionaries)                        │
 │   ThemeService (data-theme on <html>, CSS custom properties)       │
 └──────────────┬──────────────────────────────────┬───────────────────┘
-               │  same origin (port 80)           │  bonus (IRIS :52773)
+               │  same origin (port 80)           │  optional (IRIS :52773)
                ▼                                  ▼
   ┌────────────────────────────────┐   ┌──────────────────────────────┐
   │  nginx  (port 80)             │   │  /csp/portico-api (BFF)     │
@@ -179,7 +178,7 @@ transition).
 > **Requires IRIS 2026.2 or later.** The `v2` SysAdmin API (the 276 `/v2/*`
 > operations and the JWT `POST /login` endpoint) only exists in 2026.2+. On
 > 2026.1 the API reports `apiVersion: 1` and the `/v2/*` paths return `404`,
-> so the six task-area screens would have nothing to call. The Dockerfile is
+> so the six functional-area screens would have nothing to call. The Dockerfile is
 > pinned to `intersystemsdc/iris-community:2026.2` for this reason.
 
 ### Known API limitations (2026.2)
@@ -191,7 +190,7 @@ around all of them:
 |----------|----------|-----------------|
 | `GET /v2/security/sql-privileges` | Returns `400` on a fresh instance (no grants exist yet) | The SQL Privileges tab shows the query/grant/revoke tools; the list loads only after the first grant exists |
 | `POST /v2/security/audit/records` | Returns `202` with an empty body (asynchronous) | The Log Center treats it as "accepted, no inline result" and keeps polling the audit list |
-| BFF web-app registration (`/csp/portico-api`) | A `404` on an *older* running container means that container was built from a previous image whose setup registered the then-current app names; a fresh `docker compose up --build` registers the current `/csp/portico` / `/csp/portico-api` names (web-app names must start with `/` — a name without a leading slash is registered but never matched by the built-in web server). Registration itself is a standard `Security.Applications` registry write and is reliable — the setup runs it best-effort (with a timeout guard) only because the `iris session` provisioning step can occasionally be interrupted on some image builds | By design: nginx serves the SPA and proxies `/api/admin`, so the BFF is a bonus, not a dependency |
+| BFF web-app registration (`/csp/portico-api`) | A `404` on an *older* running container means that container was built from a previous image whose setup registered the then-current app names; a fresh `docker compose up --build` registers the current `/csp/portico` / `/csp/portico-api` names (web-app names must start with `/` — a name without a leading slash is registered but never matched by the built-in web server). Registration itself is a standard `Security.Applications` registry write and is reliable — the setup runs it best-effort (with a timeout guard) only because the `iris session` provisioning step can occasionally be interrupted on some image builds | By design: nginx serves the SPA and proxies `/api/admin`, so the BFF is optional, not a dependency |
 | `Enabled` on `GET /v2/web-apps` | Runtime gateway state, not configuration: after a container restart IRIS takes ~1 minute to bring the web-server gateways up, so values flap `false → true` during startup | Expected, not a bug — the list refreshes and the badges settle to `on` |
  | `POST /login` (occasionally) | Intermittently returns `401` with an empty body under rapid repeated logins (a 2026.2 quirk; a single login is reliable) | The login form retries, and falls back to Basic auth if the JWT `401`s — the user is never locked out |
 
@@ -224,7 +223,7 @@ The container:
    best-effort provisions the ObjectScript BFF (`/csp/portico-api/` — health
    + server-side log aggregation).
 
-> The BFF is a **bonus**. If it fails to load, the portal is fully functional —
+> The BFF is **optional**. If it fails to load, the portal is fully functional —
 > the Log Center falls back to client-side aggregation, and all CRUD + auth go
 > straight to `/api/admin` (via the nginx proxy).
 
@@ -249,7 +248,7 @@ The container:
    Point the `portico` web app's ppath at `dist/portico-web/browser`.
 4. Open `http://localhost:52773/csp/portico/`.
 
-> The BFF is a **bonus**. If you skip it, the portal is fully functional —
+> The BFF is **optional**. If you skip it, the portal is fully functional —
 > the Log Center falls back to client-side aggregation, and all CRUD + auth go
 > straight to `/api/admin`.
 
@@ -313,7 +312,7 @@ frontend's `<base href="auto">` resolves asset paths correctly in both modes.
         ├── core/                     AdminService, AuthService, PermissionService,
         │                               ThemeService, I18nService, coalesce, auth guard
         ├── core/i18n/                en.ts + zh.ts runtime dictionaries (~1026 keys)
-        ├── areas/                    all 14 screens: dashboard + 6 task areas + async,
+        ├── areas/                    all 14 screens: dashboard + 6 functional areas + async,
         │                               databases, ecp, ext-lang-servers, namespaces,
         │                               license, wqm
         ├── login/                    standalone sign-in page
@@ -355,7 +354,7 @@ A short walkthrough (≈ 4–5 min) that covers, in order:
    held privileges.
 2. **Dashboard** — server identity, live system usage, resource counts, and the
    privilege list that drives what's enabled.
-3. **Security & Secrets** (the differentiator) — walk through Wallet → X.509 →
+3. **Security & Secrets** (a key focus) — walk through Wallet → X.509 →
    OAuth 2.0 → SSL → Encryption, showing the permission gating (controls appear
    only when the session holds the matching `%Admin_*` privilege).
 4. **Log Center** — the unified, time-ordered stream across system status,

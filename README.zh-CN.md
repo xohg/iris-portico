@@ -10,17 +10,17 @@ IRIS Portico 为管理员提供一个统一、安全、按角色感知的控制�
 （`/api/admin`）所暴露的一切，并重点覆盖现有门户普遍服务不足的两大领域：**安全与密钥
 （security & secrets）** 以及统一的**日志中心（Log Center）**。
 
-> **原创项目。** 本项目完全从零出发，基于公开的
+> **从零构建**，基于公开的
 > [`sysadmin-api-specification`](https://github.com/intersystems-community/sysadmin-api-specification)
-> 构建，未复制任何其他参赛作品的代码。
+> 规范开发。
 
 ---
 
 ## 功能概览
 
-本门户覆盖全部**六个必选任务领域**，并映射到 SysAdmin API：
+本门户覆盖全部**六个核心功能领域**，并映射到 SysAdmin API：
 
-| 任务领域 | 能做什么 | 对应 API |
+| 功能领域 | 能做什么 | 对应 API |
 |-----------|-----------------|-------------|
 | **Web 应用与 REST** | 列出 / 创建 / 启用 Web 应用，查看 PCT 访问，管理 Web 会话与命名空间 | `/v2/web-apps`、`/v2/web-sessions`、`/v2/namespaces` |
 | **权限管理** | 管理用户、角色、资源、服务、SQL 权限、Web 认证 | `/v2/security/users`、`/roles`、`/resources`、`/services`、`/sql-privileges` |
@@ -29,7 +29,7 @@ IRIS Portico 为管理员提供一个统一、安全、按角色感知的控制�
 | **系统管理** | 查看与控制进程、设备、系统用量、锁、数据库 | `/v2/processes`、`/v2/devices`、`/v2/monitor/*`、`/v2/locks`、`/v2/databases` |
 | **日志** | **统一日志中心**，将系统状态 + 安全审计 + 日志（journal）活动聚合为一条按时间排序的流；并提供 **journal**（文件、文件详情、异步记录浏览器、设置）与 **audit**（启用开关、事件定义、异步记录查询、清理）的深入操作 | `/v2/journal/*`、`/v2/security/audit/*`、`/v2/monitor/*` |
 
-此外还有一个一等公民的**异步任务中心（Async Task Center）**，用于长时运行操作
+此外还有一个专门的**异步任务中心（Async Task Center）**，用于长时运行操作
 （`202 + Location` 模式），支持取消 / 暂停 / 恢复；以及一整套管理页面：
 
 - **数据库（Databases）** — 本地数据库目录（`/v2/database-dir*`）：列出、
@@ -163,7 +163,7 @@ Web 应用注册解耦——即使 ObjectScript BFF 从未加载，门户也能�
 
 > **需要 IRIS 2026.2 或更高版本。** `v2` SysAdmin API（276 个 `/v2/*` 操作
 > 以及 JWT `POST /login` 端点）只在 2026.2+ 中存在。在 2026.1 上，API 报告
-> `apiVersion: 1`，`/v2/*` 路径返回 `404`，因此六个任务领域屏幕将无 API 可调。
+> `apiVersion: 1`，`/v2/*` 路径返回 `404`，因此六个功能领域屏幕将无 API 可调。
 > Dockerfile 为此固定为 `intersystemsdc/iris-community:2026.2`。
 
 ### 已知 API 限制（2026.2）
@@ -174,7 +174,7 @@ Web 应用注册解耦——即使 ObjectScript BFF 从未加载，门户也能�
 |----------|----------|-----------------|
 | `GET /v2/security/sql-privileges` | 全新实例上返回 `400`（尚无任何授权） | SQL 权限标签页展示查询 / 授权 / 回收工具；列表只在存在首个授权后加载 |
 | `POST /v2/security/audit/records` | 返回 `202` 且响应体为空（异步） | 日志中心将其视为"已接受，无内联结果"，并持续轮询审计列表 |
-| BFF Web 应用注册（`/csp/portico-api`） | 在*旧的*运行中的容器上出现 `404`，说明该容器由旧镜像构建，其 setup 注册的是当时的应用名；一次新的 `docker compose up --build` 会注册当前的 `/csp/portico` / `/csp/portico-api` 名（Web 应用名必须以 `/` 开头——没有前导斜杠的名字会被注册，但内建 Web 服务器永远不会匹配到它）。注册本身是标准的 `Security.Applications` 注册表写入，是可靠的——setup 之所以以尽力（best-effort，带超时保护）方式运行，只是因为在某些镜像构建上 `iris session` 供给步骤偶尔会被打断 | 按设计：nginx 提供 SPA 并代理 `/api/admin`，因此 BFF 是加分项，而非依赖项 |
+| BFF Web 应用注册（`/csp/portico-api`） | 在*旧的*运行中的容器上出现 `404`，说明该容器由旧镜像构建，其 setup 注册的是当时的应用名；一次新的 `docker compose up --build` 会注册当前的 `/csp/portico` / `/csp/portico-api` 名（Web 应用名必须以 `/` 开头——没有前导斜杠的名字会被注册，但内建 Web 服务器永远不会匹配到它）。注册本身是标准的 `Security.Applications` 注册表写入，是可靠的——setup 之所以以尽力（best-effort，带超时保护）方式运行，只是因为在某些镜像构建上 `iris session` 供给步骤偶尔会被打断 | 按设计：nginx 提供 SPA 并代理 `/api/admin`，因此 BFF 是可选组件，而非依赖项 |
 | `GET /v2/web-apps` 的 `Enabled` | 运行时网关状态，而非配置：容器重启后 IRIS 需要约 1 分钟才能把 Web 服务器网关拉起，因此启动期间取值会在 `false → true` 间抖动 | 属预期而非 bug——列表会刷新，徽章最终稳定为 `on` |
 | `POST /login`（偶发） | 在快速连续登录时偶发返回 `401` 且响应体为空（2026.2 的怪癖；单次登录可靠） | 登录表单会重试，并在 JWT `401` 时回退到 Basic 认证——用户绝不会被锁在外面 |
 
@@ -206,7 +206,7 @@ http://localhost:80/
 4. 直接注册 Web 应用（一个会持久化的安全操作），并尽力供给 ObjectScript BFF
    （`/csp/portico-api/` — health + 服务端日志聚合）。
 
-> BFF 是**加分项**。即使它加载失败，门户也完全可用——日志中心回退到客户端聚合，
+> BFF 是**可选组件**。即使它加载失败，门户也完全可用——日志中心回退到客户端聚合，
 > 所有 CRUD + 认证都直连 `/api/admin`（经 nginx 代理）。
 
 ### 手动（不用 Docker）
@@ -230,7 +230,7 @@ http://localhost:80/
    将 `portico` Web 应用的 ppath 指向 `dist/portico-web/browser`。
 4. 打开 `http://localhost:52773/csp/portico/`。
 
-> BFF 是**加分项**。跳过它，门户也完全可用——日志中心回退到客户端聚合，
+> BFF 是**可选组件**。跳过它，门户也完全可用——日志中心回退到客户端聚合，
 > 所有 CRUD + 认证都直连 `/api/admin`。
 
 ### 演示模式（极简——仅 IRIS 内建 Web 服务器）
@@ -289,7 +289,7 @@ http://localhost:52773/csp/portico/
         ├── core/                     AdminService、AuthService、PermissionService、
         │                               ThemeService、I18nService、coalesce、认证守卫
         ├── core/i18n/                en.ts + zh.ts 运行时字典（约 1026 个键）
-        ├── areas/                    全部 14 个屏幕：dashboard + 6 个任务领域 + async、
+        ├── areas/                    全部 14 个屏幕：dashboard + 6 个功能领域 + async、
         │                               databases、ecp、ext-lang-servers、namespaces、
         │                               license、wqm
         ├── login/                    独立登录页
@@ -330,7 +330,7 @@ do ##class(%UnitTest.Run).Run("portico.UnitTest")
    顶部栏显示会话持有的权限。
 2. **仪表盘** — 服务器身份、实时系统用量、资源计数，以及驱动"哪些被启用"的
    权限列表。
-3. **安全与密钥**（差异化亮点）— 走查 Wallet → X.509 → OAuth 2.0 → SSL →
+3. **安全与密钥**（重点功能）— 走查 Wallet → X.509 → OAuth 2.0 → SSL →
    Encryption，展示权限门禁（只有当会话持有匹配的 `%Admin_*` 权限时，控件才出现）。
 4. **日志中心** — 跨系统状态、安全审计、journal 活动的统一、按时间排序的流，
    支持来源过滤与自动刷新。
