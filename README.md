@@ -263,8 +263,6 @@ frontend's `<base href="auto">` resolves asset paths correctly in both modes.
 ├── docker-compose.demo.yml           demo mode (IRIS built-in web server only)
 ├── nginx-portico.conf               SPA on :80 + /api/admin proxy
 ├── portico-setup.sh                 start-of-container provisioning (user + BFF)
-├── iris.script                       namespace + class load + web-app setup
-├── mainspec_v2.json                  the SysAdmin OpenAPI 3.0 spec (source of truth)
 ├── api-client/                       framework-agnostic TS client (shared foundation)
 │   ├── scripts/gen-types.js          spec → 142 TS types
 │   ├── src/types/index.ts            generated types

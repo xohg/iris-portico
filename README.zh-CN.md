@@ -242,8 +242,6 @@ http://localhost:52773/csp/portico/
 ├── docker-compose.demo.yml           演示模式（仅 IRIS 内建 Web 服务器）
 ├── nginx-portico.conf                SPA 在 :80 + /api/admin 代理
 ├── portico-setup.sh                  容器启动时的供给（用户 + BFF）
-├── iris.script                       命名空间 + 类加载 + Web 应用设置
-├── mainspec_v2.json                  SysAdmin OpenAPI 3.0 规范（事实来源）
 ├── api-client/                       框架无关的 TS 客户端（共享基础）
 │   ├── scripts/gen-types.js          规范 → 142 个 TS 类型
 │   ├── src/types/index.ts            生成类型
