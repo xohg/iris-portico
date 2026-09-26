@@ -102,16 +102,19 @@ export class ShellComponent implements OnInit {
   info: Info | null = null;
   heldPrivileges: string[] = [];
 
-  // Unified icon style: every nav item uses an emoji (consistent weight),
-  // replacing the earlier mix of monochrome glyphs (▦ / ⚙ / ⟳) and emoji.
+  // Unified icon style: every nav item uses a colored emoji (consistent
+  // weight and color across the menu). The earlier mix of monochrome glyphs
+  // (▦ / ⚙ / ⟳) and monochrome emoji (🕸 / ⏱ / 🗄) rendered as a mix of
+  // colored and black-and-white icons, so those were replaced with colored
+  // equivalents (📡 / 📋 / 🛢).
   nav: NavItem[] = [
     { key: 'nav.dashboard', path: '/', icon: '📊' },
-    { key: 'nav.webapps', path: '/webapps', icon: '🕸' },
+    { key: 'nav.webapps', path: '/webapps', icon: '📡' },
     { key: 'nav.permissions', path: '/permissions', icon: '🛡' },
     { key: 'nav.security', path: '/security', icon: '🔐' },
-    { key: 'nav.tasks', path: '/tasks', icon: '⏱' },
+    { key: 'nav.tasks', path: '/tasks', icon: '📋' },
     { key: 'nav.system', path: '/system', icon: '🖥' },
-    { key: 'nav.databases', path: '/databases', icon: '🗄' },
+    { key: 'nav.databases', path: '/databases', icon: '🛢' },
     { key: 'nav.namespaces', path: '/namespaces', icon: '🧩' },
     { key: 'nav.ecp', path: '/ecp', icon: '🔗' },
     { key: 'nav.extlang', path: '/ext-lang-servers', icon: '🌐' },
