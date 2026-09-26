@@ -127,6 +127,7 @@ import { I18nService } from '../core/i18n.service';
         <div class="card">
           <div class="toolbar" style="margin-bottom:12px">
             <input [placeholder]="t('permissions.sql.ph.grantee')" [(ngModel)]="sqlGrantee" />
+            <input [placeholder]="t('permissions.sql.ph.namespace')" [(ngModel)]="sqlNamespace" />
             <input [placeholder]="t('permissions.sql.ph.privilege')" [(ngModel)]="sqlPriv" />
             <button (click)="loadSql()">{{ t('permissions.sql.query') }}</button>
             @if (canSecure) {
@@ -135,10 +136,10 @@ import { I18nService } from '../core/i18n.service';
             }
           </div>
           <table>
-            <thead><tr><th>{{ t('permissions.sql.col.grantee') }}</th><th>{{ t('permissions.sql.col.privilege') }}</th><th>{{ t('permissions.sql.col.namespace') }}</th><th>{{ t('permissions.sql.col.action') }}</th></tr></thead>
+            <thead><tr><th>{{ t('permissions.sql.col.type') }}</th><th>{{ t('permissions.sql.col.object') }}</th><th>{{ t('permissions.sql.col.action') }}</th><th>{{ t('permissions.sql.col.grantedby') }}</th><th>{{ t('permissions.sql.col.grantoption') }}</th></tr></thead>
             <tbody>
               @for (p of sqlPrivs; track $index) {
-                <tr><td class="mono">{{ coalesce(p.Grantee, p.grantee) }}</td><td class="mono">{{ coalesce(p.Privilege, p.privilege) }}</td><td>{{ coalesce(p.Namespace, p.namespace) }}</td><td>{{ coalesce(p.Action, p.action) }}</td></tr>
+                <tr><td>{{ coalesce(p.Type, p.type) }}</td><td class="mono">{{ coalesce(p.Object, p.object) }}</td><td>{{ coalesce(p.Action, p.action) }}</td><td>{{ coalesce(p.GrantedBy, p.grantedBy) }}</td><td>{{ coalesce(p.GrantOption, p.grantOption) }}</td></tr>
               }
             </tbody>
           </table>
@@ -168,6 +169,7 @@ import { I18nService } from '../core/i18n.service';
           <div class="toolbar">
             <input [placeholder]="t('permissions.users.dialogPhName')" [(ngModel)]="newUserName" />
             <input [placeholder]="t('permissions.users.dialogPhDisplay')" [(ngModel)]="newUserDisplay" />
+            <input type="password" [placeholder]="t('permissions.users.dialogPhPassword')" [(ngModel)]="newUserPassword" />
             <button (click)="createUser()">{{ t('permissions.users.dialogCreate') }}</button>
             <button class="ghost" (click)="userDialog = false">{{ t('common.cancel') }}</button>
           </div>
@@ -209,16 +211,19 @@ export class PermissionsComponent implements OnInit {
   ownerRole = '';
 
   userDialog = false;
-  newUser = { name: '', display: '' };
+  newUser = { name: '', display: '', password: '' };
   roleDialog = false;
   newRole = { name: '', desc: '' };
   sqlGrantee = '';
+  sqlNamespace = '%SYS';
   sqlPriv = '';
 
   get newUserName() { return this.newUser.name; }
   set newUserName(v: string) { this.newUser.name = v; }
   get newUserDisplay() { return this.newUser.display; }
   set newUserDisplay(v: string) { this.newUser.display = v; }
+  get newUserPassword() { return this.newUser.password; }
+  set newUserPassword(v: string) { this.newUser.password = v; }
   get newRoleName() { return this.newRole.name; }
   set newRoleName(v: string) { this.newRole.name = v; }
   get newRoleDesc() { return this.newRole.desc; }
@@ -242,7 +247,7 @@ export class PermissionsComponent implements OnInit {
     else if (t === 'Roles') this.loadRoles();
     else if (t === 'Resources') this.loadResources();
     else if (t === 'Services') this.loadServices();
-    else if (t === 'SQL Privileges') this.loadSql();
+    else if (t === 'SQL Privileges') { /* no auto-load: the API requires grantee + namespace */ }
     else if (t === 'Web Auth') this.loadWebAuth();
   }
 
@@ -263,9 +268,14 @@ export class PermissionsComponent implements OnInit {
     catch (e) { this.error = this.admin.errorMessage(e); }
   }
   async loadSql(): Promise<void> {
+    // The API requires both `grantee` and `namespace`; guard client-side so an
+    // empty query shows a friendly hint instead of a 400.
+    if (!this.sqlGrantee || !this.sqlNamespace) {
+      this.error = this.i18n.t('permissions.sql.needParams');
+      return;
+    }
     try {
-      const q: Record<string, unknown> = {};
-      if (this.sqlGrantee) q.grantee = this.sqlGrantee;
+      const q: Record<string, unknown> = { grantee: this.sqlGrantee, namespace: this.sqlNamespace };
       const l = await this.admin.client.domains.permissions.listSQLPrivileges(q);
       this.sqlPrivs = Array.isArray(l) ? l : [];
     } catch (e) { this.error = this.admin.errorMessage(e); }
@@ -277,7 +287,13 @@ export class PermissionsComponent implements OnInit {
 
   async createUser(): Promise<void> {
     try {
-      await this.admin.client.domains.permissions.createUser(this.newUser.name, { Name: this.newUser.name, DisplayName: this.newUser.display } as any);
+      // v2 create-user is a POST whose body is a wrapper object:
+      // { User: {...}, Password: "..." }. `Name` is the query param (not a body
+      // field); the display name maps to the schema's `FullName`.
+      await this.admin.client.domains.permissions.createUser(this.newUser.name, {
+        User: { NameSpace: '%SYS', Enabled: true, FullName: this.newUser.display },
+        Password: this.newUser.password,
+      } as any);
       this.userDialog = false;
       await this.loadUsers();
     } catch (e) { this.error = this.admin.errorMessage(e); }
@@ -288,7 +304,9 @@ export class PermissionsComponent implements OnInit {
   }
   async createRole(): Promise<void> {
     try {
-      await this.admin.client.domains.permissions.createRole(this.newRole.name, { Name: this.newRole.name, Description: this.newRole.desc } as any);
+      // v2 create-or-update is a PUT; `Name` is the query param, not a body
+      // field (the Role schema has no Name), so send only the body fields.
+      await this.admin.client.domains.permissions.createRole(this.newRole.name, { Description: this.newRole.desc } as any);
       this.roleDialog = false;
       await this.loadRoles();
     } catch (e) { this.error = this.admin.errorMessage(e); }

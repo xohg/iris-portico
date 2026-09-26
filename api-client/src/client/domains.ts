@@ -565,7 +565,8 @@ export function createDomains(c: AdminClient): Domains {
     webApps: {
       list: () => c.get<WebApplicationList>('/v2/web-apps'),
       get: (name) => c.get<Application>('/v2/web-app', { name }),
-      create: (name, body) => c.post<Application>('/v2/web-app', body, { name }),
+      // Create-or-update: the v2 API uses PUT (not POST) for /v2/web-app.
+      create: (name, body) => c.put<Application>('/v2/web-app', body, { name }),
       update: (name, body) => c.put<Application>('/v2/web-app', body, { name }),
       remove: (name) => c.del<void>('/v2/web-app', { name }),
       listPctAccess: (name) => c.get<WebAppPctAccess[]>('/v2/web-app/pct-accesses', { name }),
@@ -589,7 +590,8 @@ export function createDomains(c: AdminClient): Domains {
       changePassword: (name, body) => c.post<void>('/v2/security/user/password', body, { name }),
       listRoles: () => c.get<RoleList>('/v2/security/roles'),
       getRole: (name) => c.get<Role>('/v2/security/role', { name }),
-      createRole: (name, body) => c.post<Role>('/v2/security/role', body, { name }),
+      // Create-or-update: the v2 API uses PUT (not POST) for /v2/security/role.
+      createRole: (name, body) => c.put<Role>('/v2/security/role', body, { name }),
       updateRole: (name, body) => c.put<Role>('/v2/security/role', body, { name }),
       removeRole: (name) => c.del<void>('/v2/security/role', { name }),
       getRoleOwners: (name) => c.get<RoleOwnerList>('/v2/security/role/owners', { name }),
@@ -672,8 +674,10 @@ export function createDomains(c: AdminClient): Domains {
       addEncryptionFileKey: (body) => c.post<void>('/v2/security/encryption/file/key', body),
       removeEncryptionFileKey: (file) => c.del<void>('/v2/security/encryption/file/key', { file }),
       // oauth2 (write)
-      initialOAuth2AccessToken: (serverId) => c.post<void>('/v2/security/oauth2/server-definition/initial-access-token', { serverId }),
-      updateOAuth2ServerDefinition: (serverId, body) => c.put<void>('/v2/security/oauth2/server-definition', { ...body, serverId }),
+      // Paths must include the `/client/` segment (matches the spec and the
+      // read-side getOAuth2ServerDefinition above).
+      initialOAuth2AccessToken: (serverId) => c.post<void>('/v2/security/oauth2/client/server-definition/initial-access-token', { serverId }),
+      updateOAuth2ServerDefinition: (serverId, body) => c.put<void>('/v2/security/oauth2/client/server-definition', { ...body, serverId }),
       updateOAuth2Client: (clientId, body) => c.put<void>('/v2/security/oauth2/server/client', { ...body, clientId }),
       updateOAuth2ServerConfig: (body) => c.put<void>('/v2/security/oauth2/server', body),
       removeOAuth2ServerConfig: () => c.del<void>('/v2/security/oauth2/server'),

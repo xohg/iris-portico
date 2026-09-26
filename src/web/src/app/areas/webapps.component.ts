@@ -504,7 +504,9 @@ export class WebAppsComponent implements OnInit {
 
   async createApp(): Promise<void> {
     try {
-      await this.admin.client.domains.webApps.create(this.newName, { Name: this.newName, WPath: this.newWpath } as any);
+      // v2 create-or-update is a PUT; the body uses `Path` + `NameSpace`
+      // (Name is the query param, not a body field). Default namespace = %SYS.
+      await this.admin.client.domains.webApps.create(this.newName, { Path: this.newWpath, NameSpace: '%SYS' } as any);
       this.createDialog = false;
       await this.load();
     } catch (e) {
