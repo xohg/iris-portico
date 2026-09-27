@@ -54,7 +54,7 @@ function emptySubForm(): SubForm {
       <div class="card">
         <h2>{{ t('system.processes') }}</h2>
         <table>
-          <thead><tr><th>{{ t('system.processes.col.pid') }}</th><th>{{ t('system.processes.col.command') }}</th><th>{{ t('system.processes.col.state') }}</th><th>{{ t('system.processes.col.commands') }}</th><th></th></tr></thead>
+          <thead><tr><th>{{ t('system.processes.col.pid') }}</th><th>{{ t('system.processes.col.command') }}</th><th>{{ t('system.processes.col.state') }}</th><th>{{ t('system.processes.col.commands') }}</th><th>{{ t('system.processes.col.cpu') }}</th><th></th></tr></thead>
           <tbody>
             @for (p of processes; track coalesce(p.Pid, p.PID, p.pid)) {
               <tr (click)="selectProcess(coalesce(p.Pid, p.PID, p.pid))" [style.background]="isProcessSelected(p) ? 'var(--bg-elev-2)' : ''">
@@ -62,6 +62,12 @@ function emptySubForm(): SubForm {
                 <td class="mono">{{ coalesce(p.Routine, p.Command, p.command) }}</td>
                 <td><span class="badge" [class.ok]="coalesce(p.State, p.state)">{{ coalesce(p.State, p.state) }}</span></td>
                 <td>{{ coalesce(p.Commands, p.CommandsExecuted, p.commands) }}</td>
+                <td style="min-width:120px">
+                  <div class="bar-row">
+                    <span class="bar"><i [style.width]="cpuPct(p) + '%'"></i></span>
+                    <span class="bar-val">{{ num(p.CPUTime ?? p.CpuTime) }}s</span>
+                  </div>
+                </td>
                 <td>
                   @if (canOperate) {
                     <button class="ghost" style="padding:2px 8px" (click)="suspendProcess(coalesce(p.Pid, p.PID, p.pid))">{{ t('system.processes.btn.suspend') }}</button>
@@ -115,11 +121,11 @@ function emptySubForm(): SubForm {
           <h2>{{ t('system.usage') }}</h2>
           @if (usage) {
             <div class="grid cols-2" style="margin-top:8px">
-              <div class="stat"><span class="value">{{ coalesce(usage.RoutineCalls, '—') }}</span><span class="label">{{ t('system.usage.routine') }}</span></div>
-              <div class="stat"><span class="value">{{ coalesce(usage.LogicalBlockRequests, '—') }}</span><span class="label">{{ t('system.usage.blocks') }}</span></div>
-              <div class="stat"><span class="value">{{ coalesce(usage.JournalEntries, '—') }}</span><span class="label">{{ t('system.usage.journal') }}</span></div>
-              <div class="stat"><span class="value">{{ coalesce(usage.BlockWrites, '—') }}</span><span class="label">{{ t('system.usage.writes') }}</span></div>
+              @for (u of usageRows; track u.k) {
+                <div class="stat"><span class="value">{{ u.v }}</span><span class="label">{{ t(u.k) }}</span></div>
+              }
             </div>
+            @if (usage.LastUpdate) { <p class="muted small" style="margin-top:10px">{{ t('system.usage.lastUpdate') }}: {{ usage.LastUpdate }}</p> }
           } @else { <p class="muted">{{ t('common.loading') }}</p> }
         </div>
         <div class="card">
@@ -141,6 +147,60 @@ function emptySubForm(): SubForm {
             </tbody>
           </table>
           @if (!devices.length) { <p class="empty">{{ t('common.none') }}</p> }
+        </div>
+      </div>
+
+      <div class="grid cols-2">
+        <div class="card">
+          <h2>{{ t('system.sharedMem') }}</h2>
+          @if (sharedMem.length) {
+            @if (sharedMemTotal) {
+              <div class="bar-row" style="margin-bottom:12px">
+                <span class="muted small" style="width:110px">{{ t('system.sharedMem.total') }}</span>
+                <span class="bar"><i [style.width]="sharedMemPct + '%'"></i></span>
+                <span class="bar-val">{{ num(sharedMemTotal.SMHUsed) }} / {{ num(sharedMemTotal.SMHAllocated) }}</span>
+              </div>
+            }
+            <table>
+              <thead><tr><th>{{ t('system.sharedMem.col.desc') }}</th><th>SMH</th><th>SMT</th><th>GST</th><th>{{ t('system.sharedMem.col.all') }}</th></tr></thead>
+              <tbody>
+                @for (m of sharedMemVisible; track coalesce(m.Description, m.description)) {
+                  <tr [style.background]="isTotalRow(m) ? 'var(--bg-elev-2)' : ''">
+                    <td>{{ coalesce(m.Description, m.description) }}</td>
+                    <td style="min-width:130px">
+                      <div class="bar-row">
+                        <span class="bar"><i [style.width]="smhPct(m) + '%'"></i></span>
+                        <span class="bar-val">{{ num(m.SMHUsed) }} / {{ num(m.SMHAllocated) }}</span>
+                      </div>
+                    </td>
+                    <td>{{ num(m.SMTUsed) }}</td>
+                    <td>{{ num(m.GSTUsed) }}</td>
+                    <td>{{ num(m.AllUsed) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else { <p class="empty">{{ t('common.none') }}</p> }
+        </div>
+        <div class="card">
+          <h2>{{ t('system.sems') }}</h2>
+          @if (semaphores.length) {
+            <p class="muted small">{{ t('system.sems.active') }}: {{ semaphores.length }} / {{ semTotal }}</p>
+            <table>
+              <thead><tr><th>{{ t('system.sems.col.name') }}</th><th>Seize</th><th>Aseize</th><th>Bseize</th><th>Busy</th></tr></thead>
+              <tbody>
+                @for (s of semaphores; track coalesce(s.Name, s.name)) {
+                  <tr>
+                    <td class="mono">{{ coalesce(s.Name, s.name) }}</td>
+                    <td>{{ num(s.Seize) }}</td>
+                    <td>{{ num(s.Aseize) }}</td>
+                    <td>{{ num(s.Bseize) }}</td>
+                    <td>{{ num(s.BusySet) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else { <p class="empty">{{ t('common.none') }}</p> }
         </div>
       </div>
 
@@ -338,6 +398,9 @@ export class SystemComponent implements OnInit {
   usage: any = null;
   locks: any[] = [];
   databases: any[] = [];
+  sharedMem: any[] = [];
+  semaphores: any[] = [];
+  semTotal = 0;
   loading = false;
   error = '';
 
@@ -394,8 +457,27 @@ export class SystemComponent implements OnInit {
     } catch (e) {
       this.error = this.admin.errorMessage(e);
     }
-    await Promise.all([this.loadDevices(), this.loadUsage(), this.loadLocks(), this.loadDatabases()]);
+    await Promise.all([this.loadDevices(), this.loadUsage(), this.loadLocks(), this.loadDatabases(), this.loadSharedMem(), this.loadSemaphores()]);
     this.loading = false;
+  }
+
+  async loadSharedMem(): Promise<void> {
+    try {
+      const r = await this.admin.client.domains.system.sharedMemoryUsage();
+      this.sharedMem = Array.isArray(r) ? r : [];
+    } catch { this.sharedMem = []; }
+  }
+
+  async loadSemaphores(): Promise<void> {
+    try {
+      const r = await this.admin.client.domains.system.systemResources();
+      const list = Array.isArray(r) ? r : [];
+      this.semTotal = list.length;
+      // Show only the semaphores that actually have activity.
+      this.semaphores = list.filter(
+        (s) => this.num(s.Seize) > 0 || this.num(s.Aseize) > 0 || this.num(s.Bseize) > 0 || this.num(s.BusySet) > 0,
+      );
+    } catch { this.semaphores = []; this.semTotal = 0; }
   }
 
   async loadDevices(): Promise<void> {
@@ -670,7 +752,75 @@ export class SystemComponent implements OnInit {
     return this.lockConfirm === this.lockIdOf(l) ? 'system.locks.confirmDelete' : 'system.locks.delete';
   }
 
+  // ---- usage / shared memory / semaphores ----------------------------------
+
+  /** All system-usage counters as [labelKey, value] rows (template-safe). */
+  get usageRows(): { k: string; v: string }[] {
+    const u = this.usage || {};
+    const row = (k: string, key: string) => ({ k, v: this.fmtNum(u[key]) });
+    return [
+      row('system.usage.globalRefs', 'AllGlobalReferences'),
+      row('system.usage.globalUpdates', 'GlobalUpdateReferences'),
+      row('system.usage.routine', 'RoutineCalls'),
+      row('system.usage.routineBuffer', 'RoutineBufferLoadsAndSaves'),
+      row('system.usage.blocks', 'LogicalBlockRequests'),
+      row('system.usage.blockReads', 'BlockReads'),
+      row('system.usage.writes', 'BlockWrites'),
+      row('system.usage.wijWrites', 'WIJwrites'),
+      row('system.usage.journal', 'JournalEntries'),
+      row('system.usage.journalBlockWrites', 'JournalBlockWrites'),
+      row('system.usage.routineLines', 'RoutineLines'),
+    ];
+  }
+
+  /** Shared-memory segments worth showing (non-zero, plus the Total row). */
+  get sharedMemVisible(): any[] {
+    return this.sharedMem.filter((m) => this.num(m.AllUsed) > 0 || this.isTotalRow(m));
+  }
+
+  get sharedMemTotal(): any {
+    return this.sharedMem.find((m) => this.isTotalRow(m)) || null;
+  }
+
+  get sharedMemPct(): number {
+    const t = this.sharedMemTotal;
+    const a = this.num(t?.SMHAllocated);
+    const u = this.num(t?.SMHUsed);
+    return a > 0 ? Math.min(100, (u / a) * 100) : (u > 0 ? 100 : 0);
+  }
+
+  isTotalRow(m: any): boolean {
+    return this.str(m?.Description) === 'Total' || this.str(m?.description) === 'Total';
+  }
+
+  /** SMH used/allocated percentage for one segment (template-safe). */
+  smhPct(m: any): number {
+    const a = this.num(m.SMHAllocated);
+    const u = this.num(m.SMHUsed);
+    return a > 0 ? Math.min(100, (u / a) * 100) : (u > 0 ? 100 : 0);
+  }
+
+  /** CPU-time bar width, relative to the busiest process (template-safe). */
+  cpuPct(p: any): number {
+    let max = 0;
+    for (const x of this.processes) max = Math.max(max, this.num(x.CPUTime ?? x.CpuTime));
+    const v = this.num(p.CPUTime ?? p.CpuTime);
+    return max > 0 ? Math.min(100, (v / max) * 100) : 0;
+  }
+
   // ---- small normalizers ---------------------------------------------------
+
+  /** Coerce to a finite number, 0 when absent. */
+  num(v: unknown): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  /** Coerce to a number and format with thousands separators, '—' when absent. */
+  fmtNum(v: unknown): string {
+    const n = this.num(v);
+    return n ? n.toLocaleString() : '—';
+  }
 
   private str(v: unknown): string {
     if (v === null || v === undefined) return '';

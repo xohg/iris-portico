@@ -95,7 +95,7 @@ import { I18nService } from '../core/i18n.service';
                   <tr (click)="selectDataServer(coalesce(s.Name, s.name))" [style.background]="selectedData === (coalesce(s.Name, s.name)) ? 'var(--bg-elev-2)' : ''">
                     <td class="mono">{{ coalesce(s.Name, s.name) }}</td>
                     <td class="mono small">{{ coalesce(s.RemoteAddress, s.remoteAddress) }}:{{ coalesce(s.RemotePort, s.remotePort) }}</td>
-                    <td><span class="badge" [class.ok]="coalesce(s.Status, s.status) === 'Normal'">{{ coalesce(s.Status, s.status) }}</span></td>
+                    <td><span class="badge" [class.ok]="isNormal(coalesce(s.Status, s.status))">{{ coalesce(s.Status, s.status) }}</span></td>
                     <td class="actions">
                       @if (canEdit) {
                         <button class="ghost" style="padding:2px 8px" (click)="dataServerAction(coalesce(s.Name, s.name), 1)">{{ t('ecp.act.disconnect') }}</button>
@@ -129,7 +129,7 @@ import { I18nService } from '../core/i18n.service';
                 @for (s of appServers; track coalesce(s.ClientName, s.clientName, $index)) {
                   <tr>
                     <td class="mono">{{ coalesce(s.ClientName, s.clientName) }}</td>
-                    <td><span class="badge" [class.ok]="coalesce(s.Status, s.status) === 'Normal'">{{ coalesce(s.Status, s.status) }}</span></td>
+                    <td><span class="badge" [class.ok]="isNormal(coalesce(s.Status, s.status))">{{ coalesce(s.Status, s.status) }}</span></td>
                     <td class="mono small">{{ coalesce(s.IPAddress, s.iPAddress) }}</td>
                     <td>{{ coalesce(s.IPPort, s.iPPort) }}</td>
                   </tr>
@@ -180,7 +180,7 @@ import { I18nService } from '../core/i18n.service';
                 <tr>
                   <td class="mono">{{ coalesce(s.SSLComputerName, s.sSLComputerName) }}</td>
                   <td class="mono small">{{ coalesce(s.ClientIP, s.clientIP) }}</td>
-                  <td><span class="badge" [class.ok]="coalesce(s.Status, s.status) === 'Authorized'">{{ coalesce(s.Status, s.status) }}</span></td>
+                  <td><span class="badge" [class.ok]="isAuthorized(coalesce(s.Status, s.status))">{{ coalesce(s.Status, s.status) }}</span></td>
                   <td class="actions">
                     @if (canEdit) {
                       <button class="ghost" style="padding:2px 8px" (click)="sslAction(coalesce(s.SSLComputerName, s.sSLComputerName), 'authorize')">{{ t('ecp.act.authorize') }}</button>
@@ -230,6 +230,20 @@ export class EcpComponent implements OnInit {
 
   // Live getter (see SystemComponent): re-evaluated each CD cycle.
   get canEdit(): boolean { return this.perms.can(PRIV.MANAGE); }
+
+  /** The API localizes status text to the session language (a zh browser gets
+   *  "正常", not "Normal"), so exact English matching misses. The app supports
+   *  exactly two locales (en, zh); the zh keywords below are taken from
+   *  IRIS's own zh-cn message catalog (allmessages_zh-cn.xml). */
+  isNormal(s: any): boolean {
+    const v = String(coalesce(s, '')).toLowerCase();
+    return v.includes('normal') || v.includes('正常');
+  }
+
+  isAuthorized(s: any): boolean {
+    const v = String(coalesce(s, '')).toLowerCase();
+    return v.includes('authorized') || v.includes('已授权');
+  }
 
   ngOnInit(): void {
     this.load();

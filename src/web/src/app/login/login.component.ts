@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
@@ -26,15 +26,15 @@ import { ThemeService } from '../core/theme.service';
         @if (error) { <p class="error">{{ error }}</p> }
         <div class="field">
           <label>{{ t('login.username') }}</label>
-          <input name="user" [(ngModel)]="user" placeholder="Superuser" autocomplete="username" />
+          <input name="user" #userRef [(ngModel)]="user" (change)="user = userRef.value" placeholder="Superuser" autocomplete="username" />
         </div>
         <div class="field">
           <label>{{ t('login.password') }}</label>
-          <input name="password" type="password" [(ngModel)]="password" placeholder="••••••••" autocomplete="current-password" />
+          <input name="password" #passRef type="password" [(ngModel)]="password" (change)="password = passRef.value" placeholder="••••••••" autocomplete="current-password" />
         </div>
         <div class="field">
           <label>{{ t('login.role') }}</label>
-          <input name="role" [(ngModel)]="role" [placeholder]="t('login.rolePlaceholder')" />
+          <input name="role" #roleRef [(ngModel)]="role" (change)="role = roleRef.value" [placeholder]="t('login.rolePlaceholder')" />
         </div>
         <button type="submit" [disabled]="busy">{{ busy ? t('login.submitting') : t('login.submit') }}</button>
       </form>
@@ -48,6 +48,10 @@ export class LoginComponent {
   readonly theme = inject(ThemeService);
   t = (k: string) => this.i18n.t(k);
 
+  @ViewChild('userRef') private userRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('passRef') private passRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('roleRef') private roleRef!: ElementRef<HTMLInputElement>;
+
   user = 'Portico';
   password = '';
   role = '';
@@ -55,10 +59,28 @@ export class LoginComponent {
   error = '';
 
   async submit(): Promise<void> {
+    // Browser password managers can fill the fields WITHOUT firing the
+    // input event that ngModel listens to (e.g. a saved credential
+    // restored before Angular binds, or picked from the autofill
+    // dropdown). The model would then stay '' while the field shows a
+    // value — the request goes out with an empty password and the
+    // server answers 401. Read the DOM values as the source of truth.
+    const user = this.userRef?.nativeElement.value ?? this.user;
+    const password = this.passRef?.nativeElement.value ?? this.password;
+    const role = this.roleRef?.nativeElement.value ?? this.role;
+    this.user = user;
+    this.password = password;
+    this.role = role;
+
     this.busy = true;
     this.error = '';
+    if (!password) {
+      this.error = this.t('login.emptyPassword');
+      this.busy = false;
+      return;
+    }
     try {
-      await this.auth.login(this.user, this.password, this.role || undefined);
+      await this.auth.login(user, password, role || undefined);
       await this.router.navigate(['/']);
     } catch (e) {
       this.error = e instanceof Error ? e.message : String(e);

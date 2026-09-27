@@ -32,6 +32,16 @@ grep -q 'RedirectMatch 302 ^/csp/portico/?$ /csp/portico/index.html' \
     echo 'RedirectMatch 302 ^/csp/portico/?$ /csp/portico/index.html' \
         >> /usr/irissys/httpd/conf/httpd-local.conf
 
+# 1b. Never cache index.html. The default server sends `Expires: +1h` with no
+#     Cache-Control, so a plain F5 keeps serving the stale index (and with it
+#     the stale main bundle + lazy chunks) for an hour after a redeploy —
+#     users see the OLD app. `no-cache` forces a revalidation on every load;
+#     the content-hashed chunks remain long-cacheable. headers_module is
+#     statically built into the IRIS httpd, so this needs no LoadModule.
+grep -q 'Header set Cache-Control "no-cache"' /usr/irissys/httpd/conf/httpd-local.conf 2>/dev/null || \
+    printf '<Location "/csp/portico/index.html">\n    Header set Cache-Control "no-cache"\n</Location>\n' \
+        >> /usr/irissys/httpd/conf/httpd-local.conf
+
 # Start the IRIS built-in web server (gateway) on :52773 if it is not already
 # listening (the instance's private webserver may have started it during
 # startup). Idempotent.

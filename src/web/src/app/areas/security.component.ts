@@ -74,18 +74,11 @@ import { I18nService } from '../core/i18n.service';
           }
           @if (canWallet) {
             <h3 style="margin-top:16px">{{ t('security.wallets.secretForm') }}</h3>
-            <div class="grid cols-2">
-              <div>
-                <label class="label">{{ t('security.wallets.col.name') }}</label>
-                <input [placeholder]="t('security.wallets.secretPhName')" [(ngModel)]="secretForm.name" />
-                <label class="label">{{ t('security.wallets.col.type') }}</label>
-                <input [placeholder]="t('security.wallets.secretPhType')" [(ngModel)]="secretForm.type" />
-              </div>
-              <div>
-                <label class="label">{{ t('security.wallets.ph.value') }}</label>
-                <input [placeholder]="t('security.wallets.ph.value')" [(ngModel)]="secretForm.value" />
-                <button style="margin-top:8px" (click)="saveSecret()">{{ t('security.wallets.secretSave') }}</button>
-              </div>
+            <div class="form-grid">
+              <div class="field"><label class="label">{{ t('security.wallets.col.name') }}</label><input [placeholder]="t('security.wallets.secretPhName')" [(ngModel)]="secretForm.name" /></div>
+              <div class="field"><label class="label">{{ t('security.wallets.col.type') }}</label><input [placeholder]="t('security.wallets.secretPhType')" [(ngModel)]="secretForm.type" /></div>
+              <div class="field"><label class="label">{{ t('security.wallets.ph.value') }}</label><input [placeholder]="t('security.wallets.ph.value')" [(ngModel)]="secretForm.value" /></div>
+              <div class="form-actions"><button (click)="saveSecret()">{{ t('security.wallets.secretSave') }}</button></div>
             </div>
           }
           @if (walletDetail) {
@@ -133,28 +126,16 @@ import { I18nService } from '../core/i18n.service';
           @if (!x509.length) { <p class="empty">{{ t('common.none') }}</p> }
           @if (canSecure) {
             <h3 style="margin-top:16px">{{ t('security.x509.create') }}</h3>
-            <div class="grid cols-2">
-              <div>
-                <label class="label">{{ t('security.x509.ph.alias') }}</label>
-                <input [(ngModel)]="x509Form.alias" />
-                <label class="label">{{ t('security.x509.ph.certFile') }}</label>
-                <textarea rows="4" class="mono" [(ngModel)]="x509Form.certificateFile"></textarea>
-              </div>
-              <div>
-                <button (click)="createX509()">{{ t('security.x509.create') }}</button>
-              </div>
+            <div class="form-grid">
+              <div class="field"><label class="label">{{ t('security.x509.ph.alias') }}</label><input [(ngModel)]="x509Form.alias" /></div>
+              <div class="field field--wide"><label class="label">{{ t('security.x509.ph.certFile') }}</label><textarea rows="4" class="mono" [(ngModel)]="x509Form.certificateFile"></textarea></div>
+              <div class="form-actions"><button (click)="createX509()">{{ t('security.x509.create') }}</button></div>
             </div>
             <h3 style="margin-top:16px">{{ t('security.x509.edit') }}</h3>
-            <div class="grid cols-2">
-              <div>
-                <label class="label">{{ t('security.x509.ph.alias') }}</label>
-                <input [(ngModel)]="x509Form.alias" />
-                <label class="label">{{ t('security.x509.ph.description') }}</label>
-                <input [(ngModel)]="x509Form.description" />
-              </div>
-              <div>
-                <button (click)="saveX509()">{{ t('security.x509.save') }}</button>
-              </div>
+            <div class="form-grid">
+              <div class="field"><label class="label">{{ t('security.x509.ph.alias') }}</label><input [(ngModel)]="x509Form.alias" /></div>
+              <div class="field"><label class="label">{{ t('security.x509.ph.description') }}</label><input [(ngModel)]="x509Form.description" /></div>
+              <div class="form-actions"><button (click)="saveX509()">{{ t('security.x509.save') }}</button></div>
             </div>
           }
           @if (x509Detail) {
@@ -478,19 +459,41 @@ import { I18nService } from '../core/i18n.service';
         <div class="card">
           <div class="toolbar" style="margin-bottom:12px">
             <button (click)="loadSsl()">{{ t('common.refresh') }}</button>
-            @if (canSecure) {
-              <input [placeholder]="t('security.ssl.placeholder')" [(ngModel)]="sslName" />
-              <button (click)="createSsl()">{{ t('security.ssl.create') }}</button>
-            }
+            @if (canSecure) { <button (click)="sslFormOpen = !sslFormOpen">{{ t('security.ssl.create') }}</button> }
           </div>
+          @if (canSecure && sslFormOpen) {
+            <h3>{{ t('security.ssl.create') }}</h3>
+            <div class="form-grid">
+              <div class="field"><label class="label">{{ t('security.ssl.ph.name') }}</label><input [(ngModel)]="sslForm.name" /></div>
+              <div class="field"><label class="label">{{ t('security.ssl.f.type') }}</label>
+                <select [(ngModel)]="sslForm.type">
+                  <option [ngValue]="0">{{ t('security.ssl.type.client') }}</option>
+                  <option [ngValue]="1">{{ t('security.ssl.type.server') }}</option>
+                </select>
+              </div>
+              <div class="field"><label class="label">{{ t('security.ssl.f.verifyPeer') }}</label>
+                <select [(ngModel)]="sslForm.verifyPeer">
+                  <option [ngValue]="0">{{ t('security.ssl.verifyPeer.0') }}</option>
+                  <option [ngValue]="1">{{ t('security.ssl.verifyPeer.1') }}</option>
+                  <option [ngValue]="3">{{ t('security.ssl.verifyPeer.3') }}</option>
+                </select>
+              </div>
+              <div class="field"><label class="label">{{ t('security.ssl.f.enabled') }}</label><input type="checkbox" [(ngModel)]="sslForm.enabled" /></div>
+            </div>
+            <div class="form-actions">
+              <button (click)="createSsl()" [disabled]="!sslForm.name.trim()">{{ t('security.ssl.create') }}</button>
+              <button class="ghost" (click)="sslFormOpen = false">{{ t('common.cancel') }}</button>
+            </div>
+          }
           <table>
-            <thead><tr><th>{{ t('security.ssl.col.name') }}</th><th>{{ t('security.ssl.col.state') }}</th><th>{{ t('security.ssl.col.cipher') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ t('security.ssl.col.name') }}</th><th>{{ t('security.ssl.col.type') }}</th><th>{{ t('security.ssl.col.enabled') }}</th><th>{{ t('security.ssl.col.description') }}</th><th></th></tr></thead>
             <tbody>
               @for (s of ssl; track coalesce(s.Name, s.name)) {
                 <tr>
                   <td class="mono">{{ coalesce(s.Name, s.name) }}</td>
-                  <td><span class="badge" [class.ok]="(coalesce(s.State, s.state)) === 'Enabled'">{{ coalesce(s.State, s.state) }}</span></td>
-                  <td class="mono">{{ coalesce(s.Cipher, s.cipher) }}</td>
+                  <td>{{ coalesce(s.Type, s.type) }}</td>
+                  <td><span class="badge" [class.ok]="truthySsl(s.Enabled, s.enabled)">{{ truthySsl(s.Enabled, s.enabled) ? t('common.on') : t('common.off') }}</span></td>
+                  <td class="small" [title]="coalesce(s.Description, s.description)">{{ coalesce(s.Description, s.description) }}</td>
                   <td>
                     @if (canSecure) {
                       <button class="ghost" style="padding:2px 8px" (click)="testSsl(coalesce(s.Name, s.name))">{{ t('security.ssl.test') }}</button>
@@ -1303,7 +1306,8 @@ export class SecurityComponent implements OnInit {
   oauthAsPassword = '';
 
   ssl: any[] = [];
-  sslName = '';
+  sslFormOpen = false;
+  sslForm = { name: '', type: 0, verifyPeer: 0, enabled: true };
 
   encryption: any = null;
   encKeys: any[] = [];
@@ -1809,8 +1813,27 @@ export class SecurityComponent implements OnInit {
     catch (e) { this.error = this.admin.errorMessage(e); }
   }
   async createSsl(): Promise<void> {
-    try { await this.admin.client.domains.security.createSSLConfiguration(this.sslName, { Name: this.sslName } as any); await this.loadSsl(); }
-    catch (e) { this.error = this.admin.errorMessage(e); }
+    const name = this.sslForm.name.trim();
+    if (!name) return;
+    try {
+      // Verified live: the v2 API requires Enabled / Type / VerifyPeer in the
+      // body, `name` as the query param, and REJECTS `Name` in the body
+      // (40307 UnexpectedRequestBodyField). Type is 0 = client, 1 = server.
+      await this.admin.client.domains.security.createSSLConfiguration(name, {
+        Enabled: this.sslForm.enabled,
+        Type: this.sslForm.type,
+        VerifyPeer: this.sslForm.verifyPeer,
+      });
+      this.sslFormOpen = false;
+      this.sslForm = { name: '', type: 0, verifyPeer: 0, enabled: true };
+      await this.loadSsl();
+    } catch (e) { this.error = this.admin.errorMessage(e); }
+  }
+
+  /** True when the given value (either casing) is truthy. */
+  truthySsl(a: unknown, b: unknown): boolean {
+    const v = a !== undefined && a !== null ? a : b;
+    return v === true || v === 'true' || v === 'True' || v === 1 || v === '1';
   }
   async testSsl(name: string): Promise<void> {
     try { await this.admin.client.domains.security.testSSLConfiguration(name); }

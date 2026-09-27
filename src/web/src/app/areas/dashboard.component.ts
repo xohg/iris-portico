@@ -42,7 +42,7 @@ interface Stat { label: string; value: string | number; path: string; }
         }
       </div>
 
-      <div class="grid cols-2">
+      <div class="grid cols-3">
         <div class="card">
           <h2>{{ t('dashboard.system') }}</h2>
           @if (usage) {
@@ -51,6 +51,32 @@ interface Stat { label: string; value: string | number; path: string; }
               <div class="stat"><span class="value">{{ coalesce(usage?.SystemUsage?.CSPSessions, '—') }}</span><span class="label">{{ t('dashboard.col.csp') }}</span></div>
               <div class="stat"><span class="value">{{ coalesce(usage?.SystemUsage?.JournalEntries, '—') }}</span><span class="label">{{ t('dashboard.col.journal') }}</span></div>
               <div class="stat"><span class="value">{{ coalesce(usage?.SystemUsage?.WriteDaemon, '—') }}</span><span class="label">{{ t('dashboard.col.writedaemon') }}</span></div>
+            </div>
+          } @else {
+            <p class="muted">{{ t('common.loading') }}</p>
+          }
+        </div>
+        <div class="card">
+          <h2>{{ t('dashboard.performance') }}</h2>
+          @if (usage?.Performance) {
+            <div class="grid cols-2" style="margin-top:8px">
+              <div class="stat"><span class="value">{{ coalesce(usage.Performance.GlobalRefsPerSecond, '—') }}</span><span class="label">{{ t('dashboard.perf.globalRefsPerSec') }}</span></div>
+              <div class="stat"><span class="value">{{ perfNum(usage.Performance.LogicalRequests) }}</span><span class="label">{{ t('dashboard.perf.logicalRequests') }}</span></div>
+            </div>
+            <div class="bar-row" style="margin-top:12px">
+              <span class="muted small" style="width:100px">{{ t('dashboard.perf.cacheEff') }}</span>
+              <span class="bar"><i [class.ok]="perfNum(usage.Performance.CacheEfficiency) >= 80" [class.warn]="perfNum(usage.Performance.CacheEfficiency) < 80 && perfNum(usage.Performance.CacheEfficiency) >= 50" [style.width]="perfNum(usage.Performance.CacheEfficiency) + '%'"></i></span>
+              <span class="bar-val">{{ coalesce(usage.Performance.CacheEfficiency, '—') }}%</span>
+            </div>
+            <div class="bar-row" style="margin-top:8px">
+              <span class="muted small" style="width:100px">{{ t('dashboard.perf.diskReads') }}</span>
+              <span class="bar"><i [style.width]="diskPct('DiskReads') + '%'"></i></span>
+              <span class="bar-val">{{ perfNum(usage.Performance.DiskReads) }}</span>
+            </div>
+            <div class="bar-row" style="margin-top:8px">
+              <span class="muted small" style="width:100px">{{ t('dashboard.perf.diskWrites') }}</span>
+              <span class="bar"><i [style.width]="diskPct('DiskWrites') + '%'"></i></span>
+              <span class="bar-val">{{ perfNum(usage.Performance.DiskWrites) }}</span>
             </div>
           } @else {
             <p class="muted">{{ t('common.loading') }}</p>
@@ -112,5 +138,21 @@ export class DashboardComponent implements OnInit {
       this.usage = null;
     }
     this.loading = false;
+  }
+
+  /** Coerce a performance value to a finite number (template-safe). */
+  perfNum(v: unknown): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  /** Disk read/write bar width, relative to the larger of the two (template-safe). */
+  diskPct(key: 'DiskReads' | 'DiskWrites'): number {
+    const p = this.usage?.Performance;
+    const r = this.perfNum(p?.DiskReads);
+    const w = this.perfNum(p?.DiskWrites);
+    const max = Math.max(r, w);
+    const v = key === 'DiskReads' ? r : w;
+    return max > 0 ? Math.min(100, (v / max) * 100) : 0;
   }
 }

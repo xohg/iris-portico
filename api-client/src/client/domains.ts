@@ -503,20 +503,23 @@ export interface Domains {
     remove(name: string): Promise<void>;
     /** Query param `namespace` is REQUIRED by the live API; optional here so callers may omit it (degrades to a 400 → []). */
     listRoutineMappings(namespace?: string): Promise<unknown[]>;
-    getRoutineMapping(name: string): Promise<unknown>;
-    /** PUT /v2/namespace/routine-mapping — body `name` required. */
-    createRoutineMapping(name: string, body: Record<string, unknown>): Promise<void>;
-    removeRoutineMapping(name: string): Promise<void>;
+    /** `namespace` query param is REQUIRED by the live API alongside `name`. */
+    getRoutineMapping(name: string, namespace: string): Promise<unknown>;
+    /** PUT /v2/namespace/routine-mapping — body `name` required; `namespace` query param required. */
+    createRoutineMapping(name: string, body: Record<string, unknown>, namespace: string): Promise<void>;
+    removeRoutineMapping(name: string, namespace: string): Promise<void>;
     listGlobalMappings(namespace?: string): Promise<unknown[]>;
-    getGlobalMapping(name: string): Promise<unknown>;
-    /** PUT /v2/namespace/global-mapping — body `name` required. */
-    createGlobalMapping(name: string, body: Record<string, unknown>): Promise<void>;
-    removeGlobalMapping(name: string): Promise<void>;
+    /** `namespace` query param is REQUIRED by the live API alongside `name`. */
+    getGlobalMapping(name: string, namespace: string): Promise<unknown>;
+    /** PUT /v2/namespace/global-mapping — body `name` required; `namespace` query param required. */
+    createGlobalMapping(name: string, body: Record<string, unknown>, namespace: string): Promise<void>;
+    removeGlobalMapping(name: string, namespace: string): Promise<void>;
     listPackageMappings(namespace?: string): Promise<unknown[]>;
-    getPackageMapping(name: string): Promise<unknown>;
-    /** PUT /v2/namespace/package-mapping — body `name` required. */
-    createPackageMapping(name: string, body: Record<string, unknown>): Promise<void>;
-    removePackageMapping(name: string): Promise<void>;
+    /** `namespace` query param is REQUIRED by the live API alongside `name`. */
+    getPackageMapping(name: string, namespace: string): Promise<unknown>;
+    /** PUT /v2/namespace/package-mapping — body `name` required; `namespace` query param required. */
+    createPackageMapping(name: string, body: Record<string, unknown>, namespace: string): Promise<void>;
+    removePackageMapping(name: string, namespace: string): Promise<void>;
     /** POST /v2/namespace/copy-mappings. */
     copyMappings(body: { SourceNamespace: string; DestinationNamespace: string }): Promise<void>;
     /** POST /v2/namespace/enable-interop — body `{name}`. */
@@ -736,8 +739,11 @@ export function createDomains(c: AdminClient): Domains {
       update: (id, body) => c.put<Task>('/v2/task', body, { id }),
       remove: (id) => c.del<void>('/v2/task', { id }),
       run: (id, body) => c.post<void>('/v2/task/run', body, { id }),
-      suspend: (id) => c.post<void>('/v2/task/suspend', undefined, { id }),
-      resume: (id) => c.post<void>('/v2/task/resume', undefined, { id }),
+      // suspend/resume require `Content-Type: application/json` AND a non-empty
+      // body even though they take no payload: a bodyless POST 415s (#40330) and
+      // an empty one 400s (#16003). Verified live: `POST {}` -> 200.
+      suspend: (id) => c.post<void>('/v2/task/suspend', {}, { id }),
+      resume: (id) => c.post<void>('/v2/task/resume', {}, { id }),
       history: () => c.get<TaskHistory[]>('/v2/task/history'),
       upcoming: () => c.get<UpcomingTasks>('/v2/task/upcoming'),
       managerStatus: () => c.get<unknown>('/v2/task/manager'),
@@ -857,19 +863,21 @@ export function createDomains(c: AdminClient): Domains {
       // `name` is a required body field (a 400 with an empty body reveals it).
       create: (name, body) => c.put<void>('/v2/namespace', body, { name }),
       remove: (name) => c.del<void>('/v2/namespace', { name }),
-      // `namespace` query param is REQUIRED by the live API; only send it when provided.
+      // `namespace` query param is REQUIRED by the live API on every mapping
+      // endpoint (list, get, create, remove — verified: name-only 400s with
+      // "Query parameter 'namespace' is required").
       listRoutineMappings: (namespace) => c.get<unknown[]>('/v2/namespace/routine-mappings', namespace ? { namespace } : undefined),
-      getRoutineMapping: (name) => c.get<unknown>('/v2/namespace/routine-mapping', { name }),
-      createRoutineMapping: (name, body) => c.put<void>('/v2/namespace/routine-mapping', body, { name }),
-      removeRoutineMapping: (name) => c.del<void>('/v2/namespace/routine-mapping', { name }),
+      getRoutineMapping: (name, namespace) => c.get<unknown>('/v2/namespace/routine-mapping', { name, namespace }),
+      createRoutineMapping: (name, body, namespace) => c.put<void>('/v2/namespace/routine-mapping', body, { name, namespace }),
+      removeRoutineMapping: (name, namespace) => c.del<void>('/v2/namespace/routine-mapping', { name, namespace }),
       listGlobalMappings: (namespace) => c.get<unknown[]>('/v2/namespace/global-mappings', namespace ? { namespace } : undefined),
-      getGlobalMapping: (name) => c.get<unknown>('/v2/namespace/global-mapping', { name }),
-      createGlobalMapping: (name, body) => c.put<void>('/v2/namespace/global-mapping', body, { name }),
-      removeGlobalMapping: (name) => c.del<void>('/v2/namespace/global-mapping', { name }),
+      getGlobalMapping: (name, namespace) => c.get<unknown>('/v2/namespace/global-mapping', { name, namespace }),
+      createGlobalMapping: (name, body, namespace) => c.put<void>('/v2/namespace/global-mapping', body, { name, namespace }),
+      removeGlobalMapping: (name, namespace) => c.del<void>('/v2/namespace/global-mapping', { name, namespace }),
       listPackageMappings: (namespace) => c.get<unknown[]>('/v2/namespace/package-mappings', namespace ? { namespace } : undefined),
-      getPackageMapping: (name) => c.get<unknown>('/v2/namespace/package-mapping', { name }),
-      createPackageMapping: (name, body) => c.put<void>('/v2/namespace/package-mapping', body, { name }),
-      removePackageMapping: (name) => c.del<void>('/v2/namespace/package-mapping', { name }),
+      getPackageMapping: (name, namespace) => c.get<unknown>('/v2/namespace/package-mapping', { name, namespace }),
+      createPackageMapping: (name, body, namespace) => c.put<void>('/v2/namespace/package-mapping', body, { name, namespace }),
+      removePackageMapping: (name, namespace) => c.del<void>('/v2/namespace/package-mapping', { name, namespace }),
       copyMappings: (body) => c.post<void>('/v2/namespace/copy-mappings', body),
       enableInterop: (name) => c.post<void>('/v2/namespace/enable-interop', { name }),
     },

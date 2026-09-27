@@ -39,18 +39,18 @@ import { I18nService } from '../core/i18n.service';
           <table>
             <thead><tr><th>{{ t('async.col.guid') }}</th><th>{{ t('async.col.task') }}</th><th>{{ t('async.col.state') }}</th><th>{{ t('async.col.started') }}</th><th>{{ t('async.col.finished') }}</th><th></th></tr></thead>
             <tbody>
-              @for (t of tasks; track coalesce(t.GUID, t.id)) {
+              @for (task of tasks; track coalesce(task.GUID, task.id)) {
                 <tr>
-                  <td class="mono">{{ coalesce(t.GUID, t.id) }}</td>
-                  <td class="mono">{{ coalesce(t.TaskName, t.taskName) }}</td>
-                  <td><span class="badge" [class.ok]="(coalesce(t.State, t.state)) === 'Finished'" [class.warn]="(coalesce(t.State, t.state)) === 'Running'">{{ coalesce(t.State, t.state) }}</span></td>
-                  <td>{{ coalesce(t.TimeStarted, t.startTime) }}</td>
-                  <td>{{ coalesce(t.TimeFinished, t.finishTime) }}</td>
+                  <td class="mono">{{ coalesce(task.GUID, task.id) }}</td>
+                  <td class="mono">{{ coalesce(task.TaskName, task.taskName) }}</td>
+                  <td><span class="badge" [class.ok]="(coalesce(task.State, task.state)) === 'Finished'" [class.warn]="(coalesce(task.State, task.state)) === 'Running'">{{ coalesce(task.State, task.state) }}</span></td>
+                  <td>{{ coalesce(task.TimeStarted, task.startTime) }}</td>
+                  <td>{{ coalesce(task.TimeFinished, task.finishTime) }}</td>
                   <td>
                     @if (canTask) {
-                      <button class="ghost" style="padding:2px 8px" (click)="cancel(coalesce(t.GUID, t.id))">{{ t('common.cancel') }}</button>
-                      <button class="ghost" style="padding:2px 8px" (click)="pause(coalesce(t.GUID, t.id))">{{ t('async.pause') }}</button>
-                      <button class="ghost" style="padding:2px 8px" (click)="resume(coalesce(t.GUID, t.id))">{{ t('async.resume') }}</button>
+                      <button class="ghost" style="padding:2px 8px" (click)="cancel(coalesce(task.GUID, task.id))">{{ t('common.cancel') }}</button>
+                      <button class="ghost" style="padding:2px 8px" (click)="pause(coalesce(task.GUID, task.id))">{{ t('async.pause') }}</button>
+                      <button class="ghost" style="padding:2px 8px" (click)="resume(coalesce(task.GUID, task.id))">{{ t('async.resume') }}</button>
                     }
                   </td>
                 </tr>

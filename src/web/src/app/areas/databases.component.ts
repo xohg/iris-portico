@@ -543,19 +543,29 @@ export class DatabasesComponent implements OnInit {
     return v === 0 ? this.t('databases.unlimited') : v + ' MB';
   }
 
+  /** The mount-state word is localized ("Mounted" vs "已加载", "Dismounted"
+   *  vs "已卸除") but the access suffix ("/RW", "/R") is stable across
+   *  languages. The app supports exactly two locales (en, zh); the zh
+   *  keywords below are from IRIS's own zh-cn message catalog. */
+  private static readonly MOUNTED_WORDS = ['mounted', '已加载'];
+  private static readonly DISMOUNTED_WORDS = ['dismounted', 'unmounted', '已卸除'];
+
   isRW(d: any): boolean {
-    const s = String(coalesce(d.Status, d.status, ''));
-    return s.includes('RW');
+    return String(coalesce(d.Status, d.status, '')).includes('RW');
   }
 
   isRO(d: any): boolean {
     const s = String(coalesce(d.Status, d.status, ''));
-    return s.includes('Mounted') && !s.includes('RW');
+    return this.hasWord(s, DatabasesComponent.MOUNTED_WORDS) && !s.includes('RW');
   }
 
   isDown(d: any): boolean {
-    const s = String(coalesce(d.Status, d.status, ''));
-    return s.includes('Dismounted') || s.toLowerCase().includes('unmounted');
+    return this.hasWord(String(coalesce(d.Status, d.status, '')), DatabasesComponent.DISMOUNTED_WORDS);
+  }
+
+  private hasWord(s: string, words: string[]): boolean {
+    const n = s.toLowerCase();
+    return words.some((w) => n.includes(w));
   }
 
   // --- tabs / header -----------------------------------------------------

@@ -37,6 +37,24 @@ import { coalesce } from '../core/coalesce';
 
       <div class="grid cols-2">
         <div class="card">
+          <h2>{{ t('license.usage') }}</h2>
+          @if (licUsage) {
+            <div class="grid cols-2" style="margin-top:8px">
+              <div class="stat"><span class="value">{{ licVal('Current License Units') ?? '—' }}</span><span class="label">{{ t('license.usage.units') }}</span></div>
+              <div class="stat"><span class="value">{{ licVal('Current Connections') ?? '—' }}</span><span class="label">{{ t('license.usage.connections') }}</span></div>
+            </div>
+            @for (b of usageBars; track b.k) {
+              <div class="bar-row" style="margin-top:12px">
+                <span class="muted small" style="width:170px">{{ t(b.k) }}</span>
+                <span class="bar"><i [class.warn]="b.pct >= 80" [style.width]="b.pct + '%'"></i></span>
+                <span class="bar-val">{{ b.val }} / {{ b.max }}</span>
+              </div>
+            }
+            @if (!usageBars.length) { <p class="muted small" style="margin-top:12px">{{ t('common.none') }}</p> }
+          } @else { <p class="muted">{{ t('common.loading') }}</p> }
+        </div>
+
+        <div class="card">
           <div class="toolbar" style="margin-bottom:12px">
             <h2 style="margin:0">{{ t('license.keyInfo') }}</h2>
             <span class="spacer"></span>
@@ -161,6 +179,8 @@ export class LicenseComponent implements OnInit {
   validateResult: any = null;
   validateResultEntries: [string, string][] = [];
 
+  licUsage: any = null;
+
   servers: any[] = [];
   selected = '';
   serverDetail: any = null;
@@ -177,8 +197,57 @@ export class LicenseComponent implements OnInit {
   async load(): Promise<void> {
     this.loading = true;
     this.error = '';
-    await Promise.all([this.loadKeyInfo(), this.loadServers()]);
+    await Promise.all([this.loadKeyInfo(), this.loadServers(), this.loadLicenseUsage()]);
     this.loading = false;
+  }
+
+  async loadLicenseUsage(): Promise<void> {
+    try {
+      this.licUsage = await this.admin.client.domains.system.licenseUsage();
+    } catch { this.licUsage = null; }
+  }
+
+  /** The API localizes the Summary labels to the session language (a zh
+   *  browser gets "当前使用的软件许可单元", not "Current License Units Used"),
+   *  so label text is not a stable key. The row ORDER is fixed by the IRIS
+   *  implementation (identical in EN and ZH): [0] current units, [1] max
+   *  units, [2] authorized, [3] current connections, [4] max connections. */
+  private static readonly SUMMARY_POS: Record<string, number> = {
+    'Current License Units': 0,
+    'Maximum License Units': 1,
+    'Authorized': 2,
+    'Current Connections': 3,
+    'Maximum Connections': 4,
+  };
+
+  /** Look up a license-usage summary value. Tries a whitespace-normalized
+   *  label match first (works when the session language is English); when
+   *  the labels are localized (zh, …) the needles miss and it falls back
+   *  to the fixed row position. */
+  licVal(needle: string): number | null {
+    const s = this.licUsage?.Summary;
+    if (!Array.isArray(s)) return null;
+    const norm = (x: unknown) => String(x ?? '').replace(/\s+/g, ' ').trim();
+    const n = norm(needle);
+    for (const row of s) {
+      if (norm(row.LicenseUnitUse).includes(n)) return Number(row.Local) || 0;
+    }
+    const pos = LicenseComponent.SUMMARY_POS[needle];
+    if (pos !== undefined && s.length === 5) return Number(s[pos].Local) || 0;
+    return null;
+  }
+
+  /** Usage bars: current/max license units and connections vs their ceilings. */
+  get usageBars(): { k: string; pct: number; val: number; max: number }[] {
+    const out: { k: string; pct: number; val: number; max: number }[] = [];
+    const push = (k: string, v: number | null, m: number | null) => {
+      if (v !== null && m !== null && m > 0) out.push({ k, pct: Math.min(100, (v / m) * 100), val: v, max: m });
+    };
+    const authorized = this.licVal('Authorized');
+    push('license.usage.curUnits', this.licVal('Current License Units'), authorized);
+    push('license.usage.maxUnits', this.licVal('Maximum License Units'), authorized);
+    push('license.usage.curConns', this.licVal('Current Connections'), this.licVal('Maximum Connections'));
+    return out;
   }
 
   async loadKeyInfo(): Promise<void> {

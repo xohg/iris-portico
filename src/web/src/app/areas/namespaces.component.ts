@@ -17,7 +17,9 @@ import { coalesce } from '../core/coalesce';
  * - PUT  /v2/namespace                body requires `name` (create/edit)
  * - DELETE /v2/namespace             param=name
  * - GET  /v2/namespace/routine-mappings · GET /v2/namespace/routine-mapping param=name · PUT/DELETE name
- * - GET  /v2/namespace/global-mappings · GET /v2/namespace/global-mapping param=name · PUT/DELETE name
+ * - GET  /v2/namespace/global-mappings · GET /v2/namespace/global-mapping param=name+namespace · PUT/DELETE name+namespace
+ *   (the live API requires the `namespace` query param on EVERY mapping
+ *   endpoint — name-only calls 400 with "Query parameter 'namespace' is required")
  * - GET  /v2/namespace/package-mappings · GET /v2/namespace/package-mapping param=name · PUT/DELETE name
  * - POST /v2/namespace/copy-mappings   body={SourceNamespace, DestinationNamespace}
  * - POST /v2/namespace/enable-interop  body={name}
@@ -406,11 +408,14 @@ export class NamespacesComponent implements OnInit {
   }
 
   async loadMappingDetail(): Promise<void> {
-    if (!this.mappingSelected) return;
+    // The live API requires the `namespace` query param on every mapping
+    // endpoint; a mapping is only selectable when a namespace is selected.
+    if (!this.mappingSelected || !this.selected) return;
+    const ns = this.selected;
     let p: Promise<unknown>;
-    if (this.mappingTab === 'global') p = this.admin.client.domains.namespaces.getGlobalMapping(this.mappingSelected);
-    else if (this.mappingTab === 'package') p = this.admin.client.domains.namespaces.getPackageMapping(this.mappingSelected);
-    else p = this.admin.client.domains.namespaces.getRoutineMapping(this.mappingSelected);
+    if (this.mappingTab === 'global') p = this.admin.client.domains.namespaces.getGlobalMapping(this.mappingSelected, ns);
+    else if (this.mappingTab === 'package') p = this.admin.client.domains.namespaces.getPackageMapping(this.mappingSelected, ns);
+    else p = this.admin.client.domains.namespaces.getRoutineMapping(this.mappingSelected, ns);
     this.mappingDetail = await p.catch(() => null);
     this.mappingDetailEntries = this.toEntries(this.mappingDetail);
   }
@@ -429,7 +434,9 @@ export class NamespacesComponent implements OnInit {
 
   async saveMapping(): Promise<void> {
     const name = this.mappingEditName.trim();
-    if (!name || this.busy) return;
+    // The live API requires the `namespace` query param on create.
+    if (!name || !this.selected || this.busy) return;
+    const ns = this.selected;
     this.busy = true;
     this.error = '';
     this.notice = '';
@@ -439,9 +446,9 @@ export class NamespacesComponent implements OnInit {
       const body: Record<string, unknown> = { name, Name: name };
       const db = this.mappingEditDatabase.trim();
       if (db !== '') body.Database = db;
-      if (this.mappingTab === 'global') await this.admin.client.domains.namespaces.createGlobalMapping(name, body);
-      else if (this.mappingTab === 'package') await this.admin.client.domains.namespaces.createPackageMapping(name, body);
-      else await this.admin.client.domains.namespaces.createRoutineMapping(name, body);
+      if (this.mappingTab === 'global') await this.admin.client.domains.namespaces.createGlobalMapping(name, body, ns);
+      else if (this.mappingTab === 'package') await this.admin.client.domains.namespaces.createPackageMapping(name, body, ns);
+      else await this.admin.client.domains.namespaces.createRoutineMapping(name, body, ns);
       this.notice = this.t('namespace.mappingSaved') + ' ' + name;
       await this.loadMappingList();
       this.newMappingEdit();
@@ -452,7 +459,8 @@ export class NamespacesComponent implements OnInit {
   }
 
   async deleteMapping(): Promise<void> {
-    if (!this.mappingSelected || this.busy) return;
+    if (!this.mappingSelected || !this.selected || this.busy) return;
+    const ns = this.selected;
     // DANGEROUS op — double confirm.
     if (!window.confirm(this.t('namespace.mappingConfirmDelete') + ' ' + this.mappingSelected + ' ?')) return;
     if (!window.confirm(this.t('namespace.mappingConfirmDelete2'))) return;
@@ -460,9 +468,9 @@ export class NamespacesComponent implements OnInit {
     this.error = '';
     this.notice = '';
     try {
-      if (this.mappingTab === 'global') await this.admin.client.domains.namespaces.removeGlobalMapping(this.mappingSelected);
-      else if (this.mappingTab === 'package') await this.admin.client.domains.namespaces.removePackageMapping(this.mappingSelected);
-      else await this.admin.client.domains.namespaces.removeRoutineMapping(this.mappingSelected);
+      if (this.mappingTab === 'global') await this.admin.client.domains.namespaces.removeGlobalMapping(this.mappingSelected, ns);
+      else if (this.mappingTab === 'package') await this.admin.client.domains.namespaces.removePackageMapping(this.mappingSelected, ns);
+      else await this.admin.client.domains.namespaces.removeRoutineMapping(this.mappingSelected, ns);
       this.notice = this.t('namespace.mappingDeleted') + ' ' + this.mappingSelected;
       this.mappingSelected = '';
       this.mappingDetail = null;

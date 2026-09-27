@@ -103,11 +103,11 @@ const EMPTY_FORM: TaskForm = {
           <div class="grid cols-2">
             <div>
               <h3>{{ t('tasks.info') }}</h3>
-              <div class="stat"><span class="label">{{ t('tasks.info.laststarted') }}</span><span class="value mono">{{ coalesce(info.LastStarted, '') }}</span></div>
-              <div class="stat"><span class="label">{{ t('tasks.info.lastfinished') }}</span><span class="value mono">{{ coalesce(info.LastFinished, '') }}</span></div>
-              <div class="stat"><span class="label">{{ t('tasks.info.next') }}</span><span class="value mono">{{ coalesce(info.NextScheduled, '') }}</span></div>
-              <div class="stat"><span class="label">{{ t('tasks.info.status') }}</span><span class="value mono">{{ coalesce(info.Status, '') }}</span></div>
-              <div class="stat"><span class="label">{{ t('tasks.info.error') }}</span><span class="value mono">{{ coalesce(info.Error, '') }}</span></div>
+              <div class="stat"><span class="label">{{ t('tasks.info.laststarted') }}</span><span class="value mono">{{ coalesce(info?.LastStarted, '') }}</span></div>
+              <div class="stat"><span class="label">{{ t('tasks.info.lastfinished') }}</span><span class="value mono">{{ coalesce(info?.LastFinished, '') }}</span></div>
+              <div class="stat"><span class="label">{{ t('tasks.info.next') }}</span><span class="value mono">{{ coalesce(info?.NextScheduled, '') }}</span></div>
+              <div class="stat"><span class="label">{{ t('tasks.info.status') }}</span><span class="value mono">{{ coalesce(info?.Status, '') }}</span></div>
+              <div class="stat"><span class="label">{{ t('tasks.info.error') }}</span><span class="value mono">{{ coalesce(info?.Error, '') }}</span></div>
             </div>
             <div>
               <h3>{{ t('tasks.detail.definition') }}</h3>
