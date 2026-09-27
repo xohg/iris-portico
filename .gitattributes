@@ -1,0 +1,10 @@
+# Force LF line endings for the shell scripts and the Dockerfile so the
+# container entrypoint works on Linux regardless of the cloner's
+# core.autocrlf setting. On Windows, `core.autocrlf=true` (the default)
+# converts the repo's LF to CRLF at checkout; a CRLF shebang
+# (`#!/usr/bin/env bash\r`) makes the kernel look for a `bash\r`
+# interpreter that does not exist, so the container exits immediately.
+# `eol=lf` overrides autocrlf for these files and keeps them LF on every
+# platform.
+*.sh text eol=lf
+Dockerfile text eol=lf
