@@ -77,13 +77,6 @@ reads the current user's privileges from `GET /info` and **enables or hides each
 action accordingly** — a user without `%Admin_Secure` simply won't see the user/
 role management controls. The top bar shows how many privileges the session holds.
 
-### Known API limitations
-
-- **Host-level CPU / RAM / disk metrics are not in the v2 API.** The
-  SysAdmin API exposes IRIS-level usage (shared memory, semaphores,
-  processes, database sizes) but no OS-level host statistics; the System
-  page therefore reports the IRIS-level metrics only.
-
 ---
 
 ## Architecture
@@ -194,9 +187,9 @@ The container:
 1. builds the Angular frontend (Node stage),
 2. starts **nginx** (serves the SPA on `:80`, proxies `/api/admin` → IRIS `:52773`),
 3. creates the `Portico` user (so `/api/admin` **JWT + Basic auth** work),
-4. registers the web apps directly (a security operation that persists) and
-   best-effort provisions the ObjectScript BFF (`/csp/portico-api/` — health
-   + server-side log aggregation).
+4. installs the IPM (ZPM) client and loads the BFF as a ZPM package —
+   `ipm load` compiles + activates + commits the `portico.*` classes, then
+   registers the web apps (frontend + BFF with its `DispatchClass`).
 
 > The BFF is **optional**. If it fails to load, the portal is fully functional —
 > the Log Center falls back to client-side aggregation, and all CRUD + auth go
@@ -211,13 +204,14 @@ The container:
    cd api-client && npm install && npm run build
    cd ../src/web && npm install && npm run build:prod
    ```
-3. **Load the BFF** (in an `iris` terminal):
+3. **Install the BFF as a ZPM package** (the recommended path — `ipm load`
+   compiles + activates + commits the classes, so they persist):
    ```
-   create namespace portico
-   set $namespace = "portico"
-   load <path>/src/cls/portico/Install.cls
-   load <path>/src/cls/portico/Web/Api.cls
-   load <path>/src/cls/portico/Service/LogAggregator.cls
+   ; one-time: install the IPM (ZPM) client
+   do $system.OBJ.Load("<path>/ipm-installer.xml","ck")
+   ; load the package (module.xml + portico/ live in src/cls/)
+   ipm "load -verbose <path>/src/cls"
+   ; register the web apps (frontend + BFF with its DispatchClass)
    do ##class(portico.Install).Run()
    ```
    Point the `portico` web app's ppath at `dist/portico-web/browser`.
@@ -269,17 +263,20 @@ frontend's `<base href="auto">` resolves asset paths correctly in both modes.
 ├── Dockerfile / docker-compose.yml   one-command run (nginx + IRIS, production)
 ├── docker-compose.demo.yml           demo mode (IRIS built-in web server only)
 ├── nginx-portico.conf               SPA on :80 + /api/admin proxy
-├── portico-setup.sh                 start-of-container provisioning (user + BFF)
+├── portico-setup.sh                 start-of-container provisioning (user + IPM + ZPM)
 ├── api-client/                       framework-agnostic TS client (shared foundation)
 │   ├── scripts/gen-types.js          spec → 142 TS types
 │   ├── src/types/index.ts            generated types
 │   ├── src/client/                   AdminClient, AuthManager, 13 domain groups, errors
 │   └── test/client.test.js           13 unit tests (node:test, mock fetch)
-├── src/cls/portico/                 ObjectScript BFF
-│   ├── Install.cls                   one-time, idempotent web-app setup
-│   ├── Web/Api.cls                   %CSP entry point (health + log center)
-│   ├── Service/LogAggregator.cls     server-side log aggregation
-│   └── UnitTest.cls                  %UnitTest cases (run inside IRIS)
+├── src/cls/                         IPM/ZPM package (module.xml + portico/)
+│   ├── module.xml                    ZPM module descriptor (portico 1.0.0)
+│   └── portico/                      ObjectScript BFF
+│       ├── ZPM.cls                   module descriptor class
+│       ├── Install.cls               one-time, idempotent web-app setup
+│       ├── Web/Api.cls               %CSP entry point (health + log center)
+│       ├── Service/LogAggregator.cls server-side log aggregation
+│       └── UnitTest.cls              %UnitTest cases (run inside IRIS)
 └── src/web/                          Angular 18 frontend (standalone components)
     ├── public/                       static assets (favicon + logo, served at the app root)
     └── src/app/

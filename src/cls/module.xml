@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="IRIS" version="26">
+    <Document name="portico.ZPM">
+        <Module>
+            <Name>portico</Name>
+            <Version>1.0.0</Version>
+            <Resource Name="portico.PKG"/>
+        </Module>
+    </Document>
+</Export>

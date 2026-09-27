@@ -8,13 +8,16 @@
 # to be ready before calling this, so the `iris session` calls below succeed.
 #
 # It creates the Portico user with %All privileges (so /api/admin Basic auth
-# works) and registers the web apps. Both are security operations — they
-# auto-commit and PERSIST. Idempotent — safe to re-run on every start.
+# works), installs the IPM (ZPM) client, loads the BFF as a ZPM package
+# (`ipm load` compiles + activates + commits the portico.* classes), and
+# registers the web apps (frontend + BFF with its DispatchClass). All of these
+# persist. Idempotent — safe to re-run on every start.
 #
 # NOTE on the `iris session` shell: it is a limited command processor. It
 # supports set/write/do/if/halt, but NOT try/catch, if/else, or
 # commit/rollback. It executes the heredoc line-by-line, so the statements
-# below are kept flat (no unsupported structure).
+# below are kept flat (no unsupported structure). Class compilation is done by
+# `ipm load` (which commits), not by this shell.
 
 # 0. Start nginx (serves the Angular SPA on :80 and proxies /api/admin to the
 #    built-in IRIS web server on :52773). Production only — absent in demo.
@@ -78,29 +81,32 @@ halt
 EOSESS
 echo "[portico-setup] user step done."
 
-# 3. Register the frontend web app (serves the Angular SPA from /irisdev/web).
-#    Security operation — persists. Idempotent (re-saving leaves it intact).
-#    Does NOT depend on the portico.* classes (which do not persist via this
-#    CLI: the `iris session` shell has no `commit`, so class compilation
-#    rolls back at `halt`).
-echo "[portico-setup] registering /csp/portico web app..."
+# 3. Install the IPM (ZPM) client. The IRIS instance data is ephemeral
+#    (recreated on every container start), so the client must be installed on
+#    every start. The installer is baked into the image (no internet needed at
+#    start); loading it self-commits and persists the client. Idempotent.
+echo "[portico-setup] installing IPM client..."
 iris session $ISC_PACKAGE_INSTANCENAME -U%SYS <<-'EOSESS' > /dev/null 2>&1
-set app = ##class(Security.Applications).%New()
-set app.Name = "/csp/portico"
-set app.Path = "/irisdev/web"
-do app.%Save()
+do $system.OBJ.Load("/irisdev/ipm-installer.xml","ck")
 halt
 EOSESS
-echo "[portico-setup] web app step done."
+echo "[portico-setup] IPM client step done."
 
-# 4. Best-effort: register the BFF web app (bonus). The dispatch class
-#    (portico.Web.Api) does not persist in this build, so this is informational
-#    only — the frontend above is the primary deliverable. Non-fatal.
+# 4. Load the ZPM package (the BFF). `ipm load` runs the full
+#    Initialize/Reload/Validate/Compile/Activate lifecycle and COMMITS, so the
+#    portico.* classes are compiled and persist — unlike the old direct-load
+#    flow, which never compiled them. Idempotent.
+export PATH="$HOME/.local/bin:$PATH"
+echo "[portico-setup] loading ZPM package (BFF)..."
+ipm -U %SYS "load -verbose /irisdev/src" 2>&1 | sed 's/^/[portico-setup] ipm: /'
+echo "[portico-setup] ZPM load done."
+
+# 5. Register the web apps (frontend + BFF with its DispatchClass). The BFF
+#    registration sets spec("DispatchClass") = portico.Web.Api — the property
+#    the old setup omitted, which is why the BFF used to 404. Idempotent.
+echo "[portico-setup] registering web apps..."
 iris session $ISC_PACKAGE_INSTANCENAME -U%SYS <<-'EOSESS' > /dev/null 2>&1
-set app = ##class(Security.Applications).%New()
-set app.Name = "/csp/portico-api"
-set app.Path = ""
-do app.%Save()
+do ##class(portico.Install).Run()
 halt
 EOSESS
 echo "[portico-setup] done."

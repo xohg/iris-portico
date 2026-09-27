@@ -72,9 +72,19 @@ RUN ok=0; for i in 1 2 3 4 5 6; do \
          ln -sf /dev/null /var/log/nginx/access.log \
          && ln -sf /dev/null /var/log/nginx/error.log; \
        fi
-# ObjectScript source. The setup script loads these directly (load + compile),
-# so no IPM/ZPM module descriptor is needed.
+# ObjectScript source, laid out as an IPM/ZPM package: `module.xml` at the
+# package root plus the `portico/` package directory. The setup script installs
+# the IPM client and runs `ipm load` on this directory, which compiles +
+# activates + commits the BFF classes (so they persist across restarts).
 COPY src/cls /irisdev/src
+
+# The IPM (ZPM) client installer, downloaded at build time so the setup script
+# can install the client at container start WITHOUT needing internet. The IRIS
+# instance data is ephemeral (recreated on every container start), so the IPM
+# client — and the BFF classes it compiles — must be (re)installed on every
+# start; the setup script does that from this baked file.
+RUN curl -fsSL https://pm.community.intersystems.com/packages/zpm/latest/installer \
+      -o /irisdev/ipm-installer.xml
 
 # Angular build output (served by nginx as the static SPA at /, and also kept
 # at /irisdev/web in case an IRIS web app is registered to serve it).

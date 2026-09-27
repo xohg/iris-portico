@@ -3,36 +3,42 @@ Class portico.Install Extends %RegisteredObject
 
 /// One-time setup. Idempotent — safe to re-run.
 ///
-/// Registers the two web applications in the current namespace if they do not
-/// already exist (skips any that already exist, so re-runs are safe):
-///   - portico      : serves the built Angular frontend (static files) at
-///                    /csp/portico/ — the IRIS built-in web server serves the
-///                    SPA in demo / minimal mode; in production nginx serves
-///                    the same files, so this registration is a bonus there
-///   - portico-api  : serves the ObjectScript BFF (portico.Web.Api) at /csp/portico-api/
+/// Registers (or updates) the two web applications in %SYS:
+///   - /csp/portico      : serves the built Angular frontend (static files)
+///                         from /irisdev/web — the IRIS built-in web server
+///                         serves the SPA in demo / minimal mode; in production
+///                         nginx serves the same files, so this is a bonus there
+///   - /csp/portico-api  : dispatches every request to the ObjectScript BFF
+///                         (portico.Web.Api) via the DispatchClass property
 ///
 /// The BFF is a bonus (health + server-side log aggregation). The frontend's
 /// primary path is the system /api/admin, so a BFF registration failure is
 /// non-fatal — the app degrades to client-side log aggregation.
 ///
-/// Note: IRIS web-application definitions (Security.Applications) have no
-/// "fallback" setting, so SPA deep links (e.g. /csp/portico/tasks) are not
-/// auto-redirected to index.html by the built-in web server. In demo mode,
-/// enter via the app root /csp/portico/ (which serves index.html); the
-/// client-side router then handles in-app navigation.
-Method Run()
+/// Uses the documented Security.Applications API (Create/Modify with a spec
+/// array). The dispatch class is set with spec("DispatchClass"); the previous
+/// setup omitted it, which is why the BFF used to 404.
+///
+/// Note: IRIS web-application definitions have no "fallback" setting, so SPA
+/// deep links (e.g. /csp/portico/tasks) are not auto-redirected to index.html
+/// by the built-in web server. In demo mode, enter via the app root
+/// /csp/portico/ (which serves index.html); the client-side router then
+/// handles in-app navigation.
+ClassMethod Run()
 {
-    write !,"[portico.Install] Setting up IRIS Portico in namespace ", $system.Namespace.Current(), !
+    write !,"[portico.Install] Setting up IRIS Portico in %SYS"
 
-    // 1. Angular frontend (the UI is served from here in demo mode; in
-    //    production nginx serves the same files, so this is a bonus there).
-    //    Web-application names must start with "/" (Security.Applications
-    //    docs); the name IS the URL the built-in web server routes to.
-    do ..EnsureWebApp("/csp/portico", "/csp/portico/", "/irisdev/web", "")
+    // 1. Angular frontend (static files). In demo mode the built-in web
+    //    server serves the SPA from here; in production nginx serves the same
+    //    files, so this registration is a bonus there. Type 3 = CSP (file
+    //    serving).
+    do ..EnsureWebApp("/csp/portico", "/irisdev/web", "", 3)
 
-    // 2. BFF (best-effort; non-fatal on failure).
+    // 2. BFF (dispatch class; best-effort, non-fatal on failure). Type 2 =
+    //    REST — required, because the DispatchClass property only applies to
+    //    REST web applications (per the Security.Applications documatic).
     try {
-        do ..EnsureWebApp("/csp/portico-api", "/csp/portico-api/", "", "portico.Web.Api")
+        do ..EnsureWebApp("/csp/portico-api", "", "portico.Web.Api", 2)
     } catch ex {
         write !,"[portico.Install] BFF web app registration skipped (non-fatal): ", ex.Message
     }
@@ -40,32 +46,34 @@ Method Run()
     write !,"[portico.Install] Setup complete."
 }
 
-/// Register a web application if it does not already exist (idempotent —
-/// skips any that already exist). `dispatch` is the CSP class to dispatch to
-/// (empty for static-file apps).
-///
-/// Uses the validated positional form of $system.WebApplication.Create:
-///   (name, wpath, ppath, web, ssl, https, dispatch)
-/// Only these seven arguments are used, so no unverified trailing argument is
-/// passed (Security.Applications has no "fallback" property).
-///
-/// IMPORTANT: `name` must start with "/" — per the Security.Applications
-/// docs ("Web applications should start with a '/'"), the name is the URL
-/// path the built-in web server routes to. A name without a leading slash
-/// (e.g. "portico") is registered but never matched, so the app 404s.
-Method EnsureWebApp(name As %String, wpath As %String, ppath As %String, dispatch As %String)
+/// Create (or update) a web application with the documented spec-array form.
+/// `ppath` is the physical path for static files (empty for the BFF);
+/// `dispatch` is the class to dispatch all requests to (empty for the
+/// static-file frontend app); `type` is 2 (REST, for the dispatch-class BFF)
+/// or 3 (CSP, for the static-file frontend).
+ClassMethod EnsureWebApp(name As %String, ppath As %String, dispatch As %String, type As %Integer)
 {
-    if $system.WebApplication.GetApplication(name) {
-        write "  - ", name, " already exists; skipping."
-        quit
+    // Build the spec array. AutheEnabled=64 is AutheUnauthenticated (bit 6);
+    // MatchRoles ":%All" grants the %All role so the demo is reachable.
+    kill spec
+    set spec("NameSpace") = "%SYS"
+    set spec("Type") = type
+    set spec("AutheEnabled") = 64
+    set spec("MatchRoles") = ":%All"
+    if ppath '= "" {
+        set spec("Path") = ppath
     }
-    if dispatch = "" {
-        do $system.WebApplication.Create(name, wpath, ppath)
+    if dispatch '= "" {
+        set spec("DispatchClass") = dispatch
+    }
+
+    if ##class(Security.Applications).Exists(name) {
+        do ##class(Security.Applications).Modify(name, .spec)
+        write "  - updated ", name
     } else {
-        // 7th positional argument is the DispatchClass.
-        do $system.WebApplication.Create(name, wpath, ppath, 1, 0, 0, dispatch)
+        do ##class(Security.Applications).Create(name, .spec)
+        write "  - created ", name
     }
-    write "  - created ", name, " (", wpath, ")"
 }
 
 }
