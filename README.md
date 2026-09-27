@@ -77,6 +77,13 @@ reads the current user's privileges from `GET /info` and **enables or hides each
 action accordingly** — a user without `%Admin_Secure` simply won't see the user/
 role management controls. The top bar shows how many privileges the session holds.
 
+### Known API limitations
+
+- **Host-level CPU / RAM / disk metrics are not in the v2 API.** The
+  SysAdmin API exposes IRIS-level usage (shared memory, semaphores,
+  processes, database sizes) but no OS-level host statistics; the System
+  page therefore reports the IRIS-level metrics only.
+
 ---
 
 ## Architecture

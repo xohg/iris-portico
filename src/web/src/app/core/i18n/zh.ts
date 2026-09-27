@@ -298,7 +298,7 @@ export const zhDict: Record<string, string> = {
   'system.broadcast.send': '发送',
   'system.broadcast.sent': '已发送到',
   'system.deviceDetail': '设备详情',
-  'system.deviceDetail.select': '在左侧选择一个设备。',
+  'system.deviceDetail.select': '从设备列表选择一个设备。',
   'system.deviceDetail.type': '类型',
   'system.deviceDetail.subtype': '子类型',
   'system.deviceDetail.status': '状态',

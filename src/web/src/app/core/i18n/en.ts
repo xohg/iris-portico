@@ -300,7 +300,7 @@ export const enDict: Record<string, string> = {
   'system.broadcast.send': 'Send',
   'system.broadcast.sent': 'Sent to',
   'system.deviceDetail': 'Device detail',
-  'system.deviceDetail.select': 'Select a device on the left.',
+  'system.deviceDetail.select': 'Select a device from the list.',
   'system.deviceDetail.type': 'Type',
   'system.deviceDetail.subtype': 'SubType',
   'system.deviceDetail.status': 'Status',
