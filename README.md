@@ -173,8 +173,14 @@ docker compose up --build
 Then open:
 
 ```
-http://localhost:80/
+http://localhost:8080/
 ```
+
+> The host port is **8080** (the container port stays 80) so the one-command
+> run works out of the box on every platform — on Windows, binding host ports
+> below 1024 (80) requires an elevated terminal. If you specifically want host
+> port 80, change the mapping in `docker-compose.yml` to `80:80` and run the
+> terminal as administrator (Windows only; Linux/macOS need no elevation).
 
 Sign in with the credentials the container creates:
 

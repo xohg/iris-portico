@@ -2,8 +2,15 @@
 #
 #   docker compose up --build
 #
-# Then open:  http://localhost:80/
+# Then open:  http://localhost:8080/
 # Login:      Portico / Portico123   (in the app's login form)
+#
+# The host port is 8080 (not 80) so the default run works out of the box on
+# every platform: on Windows, binding host ports below 1024 (80) requires an
+# elevated (admin) terminal. The container port stays 80 (nginx inside the
+# container), so the app itself is unchanged. If you specifically want host
+# port 80, change the mapping below to "80:80" and run the terminal as
+# administrator (Windows) — on Linux/macOS no elevation is needed.
 #
 # The container:
 #   1. builds the Angular frontend (node stage)
@@ -23,7 +30,7 @@ services:
     image: iris-portico:latest
     container_name: iris-portico
     ports:
-      - "80:80"        # nginx: Angular SPA + /api/admin proxy (main entry)
+      - "8080:80"      # nginx: Angular SPA + /api/admin proxy (main entry)
       - "52773:52773"  # IRIS web server (direct, for debugging)
     environment:
       - CSENV=1

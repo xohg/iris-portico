@@ -159,8 +159,13 @@ docker compose up --build
 然后打开：
 
 ```
-http://localhost:80/
+http://localhost:8080/
 ```
+
+> host 端口用 **8080**（容器内仍是 80），这样一条命令在所有平台都能开箱即用——
+> Windows 上绑定 1024 以下的 host 端口（80）需要管理员终端。如果你确实想用 host
+> 80 端口，把 `docker-compose.yml` 里的映射改成 `80:80` 并以管理员身份运行终端
+> （仅 Windows 需要；Linux/macOS 无需提权）。
 
 用容器创建的凭据登录：
 
@@ -173,8 +178,8 @@ http://localhost:80/
 1. 构建 Angular 前端（Node 阶段），
 2. 启动 **nginx**（在 `:80` 提供 SPA，把 `/api/admin` 代理到 IRIS `:52773`），
 3. 创建 `Portico` 用户（使 `/api/admin` 的 **JWT + Basic 认证**可用），
-4. 直接注册 Web 应用（一个会持久化的安全操作），并尽力供给 ObjectScript BFF
-   （`/csp/portico-api/` — health + 服务端日志聚合）。
+4. 安装 IPM (ZPM) 客户端并把 BFF 作为 ZPM 包加载——`ipm load` 编译 + 激活 + 提交
+   `portico.*` 类，然后注册 Web 应用（前端 + 带 `DispatchClass` 的 BFF）。
 
 > BFF 是**可选组件**。即使它加载失败，门户也完全可用——日志中心回退到客户端聚合，
 > 所有 CRUD + 认证都直连 `/api/admin`（经 nginx 代理）。
